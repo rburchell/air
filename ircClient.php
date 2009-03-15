@@ -43,6 +43,12 @@ class ircClient extends socketClient {
 	/help -> give overview of commands!
 	*/
 
+	private function escape($s)
+	{
+		$s = str_replace("\\", "\\\\", $s);
+		return htmlentities($s, ENT_QUOTES, 'UTF-8');
+	}
+
 	private function user_command($destination, $msg)
 	{
 		echo "USER CMD " . $this->key . " " . $destination . " " . $msg . "\n";
@@ -272,17 +278,17 @@ class ircClient extends socketClient {
 		switch ($action) {
 			case 'ping':
 				$this->write("NOTICE $from :".chr(1)."PING $param".chr(1)."\r\n");
-				$from = htmlentities($from, ENT_QUOTES, 'UTF-8');
+				$from = $this->escape($from);
 				$this->send_script("chat.onPing('$from');");
 				break;
 			case 'time':
 				$this->write("NOTICE $from :".chr(1).gmdate("D, d M Y H:i:s", time() + 900)." GMT".chr(1)."\r\n");
-				$from = htmlentities($from, ENT_QUOTES, 'UTF-8');
+				$from = $this->escape($from);
 				$this->send_script("chat.onTime('$from');");
 				break;
 			case 'version':
 				$this->write("NOTICE $from :".chr(1)."Chat 0.1 prototype by Chris Chabot <chabotc@xs4all.nl>".chr(1)."\r\n");
-				$from = htmlentities($from, ENT_QUOTES, 'UTF-8');
+				$from = $this->escape($from);
 				$this->send_script("chat.onVersion('$from');");
 				break;
 		}
@@ -296,9 +302,9 @@ class ircClient extends socketClient {
 		switch ($action) {
 			case 'action':
 				echo "[IRC] ctcp $from ($channel): $arg\n";
-				$from    = htmlentities($from,    ENT_QUOTES, 'UTF-8');
-				$channel = htmlentities($channel, ENT_QUOTES, 'UTF-8');
-				$arg     = htmlentities($arg,     ENT_QUOTES, 'UTF-8');
+				$from    = $this->escape($from);
+				$channel = $this->escape($channel);
+				$arg     = $this->escape($arg);
 				$this->send_script("chat.onAction('$channel', '$from', '$arg');");
 				break;
 			default:
@@ -322,30 +328,30 @@ class ircClient extends socketClient {
 
 	public function on_privmsg($from, $msg)
 	{
-		echo "[IRC] priv_msg $from> $msg\n";
-		$from = htmlentities($from, ENT_QUOTES, 'UTF-8');
-		$msg  = htmlentities($msg,  ENT_QUOTES, 'UTF-8');
+		$from = $this->escape($from);
+		$msg  = $this->escape($msg);
 		$this->send_script("chat.onPrivateMessage('$from','$msg');");
 
 	}
 
 	public function on_msg($from, $channel, $msg)
 	{
-		$msg = str_replace('\\','\\\\',htmlentities($msg, ENT_QUOTES, 'UTF-8'));
+		$from = $this->escape($from);
+		$channel = $this->escape($from);
+		$msg  = $this->escape($msg);
+
 		$this->send_script("chat.onMessage('$from', '$channel', '$msg');");
 	}
 
 	public function on_notice($from, $msg)
 	{
-		echo "[IRC] Notice $from> $msg\n";
-		$from = htmlentities($from, ENT_QUOTES, 'UTF-8');
-		$msg  = htmlentities($msg,  ENT_QUOTES, 'UTF-8');
+		$from = $this->escape($from);
+		$msg  = $this->escape($msg);
 		$this->send_script("chat.onNotice('$from','$msg');");
 	}
 
 	public function on_mode($from, $command, $to, $param)
 	{
-		echo "[IRC] mode from $from: $to [$param]\n";
 		if (isset($this->channels[$to])) {
 			$channel = $this->channels[$to];
 			$param   = trim(substr($param, strpos($param, 'MODE') + strlen('MODE') + strlen($to) + 2));
@@ -411,15 +417,14 @@ class ircClient extends socketClient {
 
 	public function on_server_notice($notice)
 	{
-		echo "[IRC] server notice: $notice\n";
-		$notice = htmlentities($notice, ENT_QUOTES, 'UTF-8');
+		$notice = $this->escape($notice);
 		$this->send_script("chat.onServerNotice('$notice');");
 	}
 
 	public function on_error($error)
 	{
 		echo "[IRC] error: $error\n";
-		$error = htmlentities($error, ENT_QUOTES, 'UTF-8');
+		$error = $this->escape($error);
 		$this->send_script("chat.onError('$error');");
 		$this->close();
 	}
@@ -433,7 +438,7 @@ class ircClient extends socketClient {
 	{
 		if (isset($this->channels[$channel])) $this->channels[$channel]->on_part($who, $message);
 		if ($who == $this->nick) {
-			$channel = htmlentities($channel, ENT_QUOTES, 'UTF-8');
+			$channel = $this->escape($channel);
 			$this->send_script("chat.removeChannel('{$channel}');");
 			unset($this->channels[$channel]);
 		}
@@ -554,12 +559,12 @@ class ircClient extends socketClient {
 			if ($key == 'motd') {
 				$lines = explode("\n", $this->server_info['motd']);
 				foreach ($lines as $line) {
-					$line = htmlentities($line, ENT_QUOTES, 'UTF-8');
+					$line = $this->escape($line);
 					$this->send_script("chat.onMotd('$line');");
 				}
 			} else {
-				$key = htmlspecialchars($key, ENT_QUOTES, 'UTF-8');
-				$val = htmlspecialchars($val, ENT_QUOTES, 'UTF-8');
+				$key = $this->escape($key);
+				$val = $this->escape($val);
 				$this->send_script("chat.onServerInfo('$key','$val');");
 			}
 		}
@@ -592,11 +597,11 @@ class ircClient extends socketClient {
 		foreach ($this->channels as $channel) {
 			$channel->who($params[1], $params[2], $params[3], $params[4], $full_name);
 		}
-		$ident     = htmlspecialchars($params[1], ENT_QUOTES, 'UTF-8');
-		$host      = htmlspecialchars($params[2], ENT_QUOTES, 'UTF-8');
-		$server    = htmlspecialchars($params[3], ENT_QUOTES, 'UTF-8');
-		$nick      = htmlspecialchars($params[4], ENT_QUOTES, 'UTF-8');
-		$full_name = htmlspecialchars($full_name, ENT_QUOTES, 'UTF-8');
+		$ident     = $this->escape($params[1]);
+		$host      = $this->escape($params[2]);
+		$server    = $this->escape($params[3]);
+		$nick      = $this->escape($params[4]);
+		$full_name = $this->escape($full_name);
 		$this->send_script("chat.onWho('$nick','$ident','$host','$server','$full_name');");
 	}
 
@@ -627,26 +632,26 @@ class ircClient extends socketClient {
 
 	private function rpl_notopic($from, $command, $to, $param)
 	{
-		$channel = htmlentities(substr($param, 0, strpos($param, ':')), ENT_QUOTES, 'UTF-8');
-		$msg     = htmlentities(substr($param, strpos($param, ':') + 1), ENT_QUOTES, 'UTF-8');
+		$channel = $this->escape(substr($param, 0, strpos($param, ':')));
+		$msg     = $this->escape(substr($param, strpos($param, ':') + 1));
 		$this->send_script("chat.onError('$channel: $msg');");
 	}
 
 	private function rpl_whowasuser($from, $command, $to, $param)
 	{
-		$param = htmlentities($param, ENT_QUOTES, 'UTF-8');
+		$param = $this->escape($param);
 		$this->send_script("chat.onWhowas('$param');");
 	}
 
 	private function rpl_whoisserver($from, $command, $to, $param)
 	{
-		$param = htmlentities($param, ENT_QUOTES, 'UTF-8');
+		$param = $this->escape($param);
 		$this->send_script("chat.onWhois('$param');");
 	}
 
 	private function rpl_endofwhowas($from, $command, $to, $param)
 	{
-		$param = htmlentities($param, ENT_QUOTES, 'UTF-8');
+		$param = $this->escape($param);
 		$this->send_script("chat.onWhowas('End of /WHOWAS');");
 	}
 
@@ -657,10 +662,9 @@ class ircClient extends socketClient {
 
 	private function rpl_list($from, $command, $to, $param)
 	{
-		//$topic   = htmlentities(trim(substr($param, strpos($param, ':') + 1)), ENT_QUOTES, 'UTF-8');
 		$param   = explode(' ',trim(substr($param, 0, strpos($param, ':'))));
-		$channel = htmlentities($param[0], ENT_QUOTES, 'UTF-8');
-		$members = htmlentities($param[1], ENT_QUOTES, 'UTF-8');
+		$channel = $this->escape($param[0]);
+		$members = $this->escape($param[1]);
 		// , '$topic'
 		$this->send_script("chat.listWindow.add('$channel', '$members');");
 	}
@@ -672,28 +676,28 @@ class ircClient extends socketClient {
 
 	private function rpl_tryagain($from, $command, $to, $param)
 	{
-		$param = htmlentities($param, ENT_QUOTES, 'UTF-8');
+		$param = $this->escape($param);
 		$this->send_script("chat.onError('$param');");
 	}
 
 	private function err_cannotsendtochan($from, $command, $to, $param)
 	{
-		$channel = htmlentities(substr($param, 0, strpos($param, ':')), ENT_QUOTES, 'UTF-8');
-		$msg     = htmlentities(substr($param, strpos($param, ':') + 1), ENT_QUOTES, 'UTF-8');
+		$channel = $this->escape(substr($param, 0, strpos($param, ':')));
+		$msg     = $this->escape(substr($param, strpos($param, ':') + 1));
 		$this->send_script("chat.onError('$channel: $msg');");
 	}
 
 	private function err_nicknameinuse($from, $command, $to, $param)
 	{
 		$this->nick .= "_";
-		$param = htmlentities($param, ENT_QUOTES, 'UTF-8');
+		$param = $this->escape($param);
 		$this->send_script("chat.onError('$param, trying $this->nick');");
 		$this->nick($this->nick);
 	}
 
 	private function err_generic($from, $command, $to, $param)
 	{
-		$param = htmlentities($param, ENT_QUOTES, 'UTF-8');
+		$param = $this->escape($param);
 		$this->send_script("chat.onError('$param');");
 	}
 
