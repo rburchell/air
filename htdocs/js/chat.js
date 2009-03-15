@@ -28,8 +28,6 @@ var chat = {
 	},
 
 	showConnect: function() {
-		$('overlay').setOpacity(0.8);
-		$('overlay').show();
 		chat.connectWindow = new chatConnectWindow('connect', {allowResize : false, allowClose : false, allowDrag : true, width: 304, height: 232, zIndex:1001});
 		chat.connectWindow.show();
 	},
@@ -98,9 +96,6 @@ var chat = {
 	},
 
 	onServerInfo: function(what, info) {
-		if ($('overlay').visible()) {
-			$('overlay').hide();
-		}
 		chat.add('info', '<span class="notice">'+info+'</span>');
 		if (chat.current != 'info') {
 			chat.add(chat.current, '<span class="notice">'+info+'</span>');
@@ -108,9 +103,6 @@ var chat = {
 	},
 
 	onMotd: function(motd) {
-		if ($('overlay').visible()) {
-			$('overlay').hide();
-		}
 		if (chat.connectWindow != false) {
 			chat.connectWindow.destroy();
 			chat.connectWindow = false;

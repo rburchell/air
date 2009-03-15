@@ -45,7 +45,7 @@ class httpdServerClient extends socketServerClient {
 			$header .= "Content-Length: ".strlen($output)."\r\n";
 		} else {
 			// handle request
-			if (empty($request['url'])) {
+			if (empty($request['url']) || $request['url'] == "/") {
 				$request['url'] = '/index.html';
 			}
 			// parse get params into $params variable
@@ -125,7 +125,7 @@ class httpdServerClient extends socketServerClient {
 						$header .= "Content-Length: $size\r\n";
 						$output  = file_get_contents($file);
 					} else {
-						$output  = '<h1>404: Document not found.</h1>';
+						$output  = "<h1>404: Document not found.</h1>Couldn't find $file";
 						$header  = "'HTTP/{$request['version']} 404 Not Found\r\n".
 						           "Content-Length: ".strlen($output)."\r\n";
 					}

@@ -46,7 +46,6 @@ chatWindow.prototype = {
 			$(this.divClose).observe('mousedown', this.eventClose);
 		}
 		if (this.options.allowDrag) {
-			this.draggable      = new Draggable(this.id, { handle : this.divHandle});
 			$(this.divHandle).setStyle({ cursor : 'move' });
 		}
 		this.resizeContent();
@@ -103,9 +102,6 @@ chatWindow.prototype = {
 		}
 		if (this.options.allowClose) {
 			$(this.divClose).stopObserving("mousedown", this.eventClose);
-		}
-		if (this.options.allowDrag) {
-			this.draggable.destroy();
 		}
 		this.hide();
 		$('main').removeChild(this.element);

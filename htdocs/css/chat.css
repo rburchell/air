@@ -325,16 +325,6 @@ div.channel_list_entry div.channel_list_members {
 }
 
 
-#overlay {
-	position			: absolute;
-	width				: 100%;
-	height				: 100%;
-	top					: 0px;
-	left				: 0px;
-	background-color	: white;
-	zIndex				: 1000;
-}
-
 #send {
 	border				: 1px solid #99bbe8;
 	margin				: 4px;
