@@ -46,10 +46,7 @@ class httpdServerClient extends socketServerClient {
 		} else {
 			// handle request
 			if (empty($request['url'])) {
-				$request['url'] = '/';
-			}
-			if ($request['url'] == '/' || $request['url'] == '/index.html') {
-				$request['url'] = '/chat.html';
+				$request['url'] = '/index.html';
 			}
 			// parse get params into $params variable
 			if (strpos($request['url'],'?') !== false) {
@@ -78,6 +75,7 @@ class httpdServerClient extends socketServerClient {
 					$channel                = isset($params['channel'])  ? $params['channel']  : 'chatprototype';
 					$this->key              = md5("{$this->remote_address}:{$nickname}:{$server}:{$channel}".rand());
 					// created paired irc client
+					$server = "127.0.0.1";
 					$client                 = $daemon->create_client('ircClient', $server, 6667);
 					$client->server         = $server;
 					$client->client_address = $this->remote_address;
