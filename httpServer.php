@@ -71,11 +71,11 @@ class httpdServerClient extends socketServerClient {
 					$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
 					// streaming iframe/comet communication (hanging get), don't send content-length!
 					$nickname               = isset($params['nickname']) ? $params['nickname'] : 'chabot';
-					$server                 = isset($params['server'])   ? $params['server']   : 'chabotc.nl';
 					$channel                = isset($params['channel'])  ? $params['channel']  : 'chatprototype';
+					$server = "127.0.0.1";
+					echo "HTTP CONNECT: " . $nickname . " to " . $server . "\n";
 					$this->key              = md5("{$this->remote_address}:{$nickname}:{$server}:{$channel}".rand());
 					// created paired irc client
-					$server = "127.0.0.1";
 					$client                 = $daemon->create_client('ircClient', $server, 6667);
 					$client->server         = $server;
 					$client->client_address = $this->remote_address;
@@ -96,6 +96,7 @@ class httpdServerClient extends socketServerClient {
 					}
 					break;
 				case '/message':
+					echo "HTTP: Got a message, key is " . $params['key'] . " and msg is " . $params['msg'] . "\n";
 					if (!empty($params['key']) && !empty($params['msg'])) {
 						foreach ($daemon->clients as $socket) {
 							if (isset($socket->key) && get_class($socket) == 'ircClient' && $socket->key == $params['key']) {

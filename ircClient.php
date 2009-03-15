@@ -45,41 +45,10 @@ class ircClient extends socketClient {
 
 	private function user_command($destination, $msg)
 	{
+		echo "USER CMD " . $this->key . " " . $destination . " " . $msg . "\n";
 		$cmd   = trim(substr($msg, 1, strpos($msg, ' '))) != '' ? trim(substr($msg, 1, strpos($msg, ' '))) : trim(substr($msg, 1));
 		$param = strpos($msg, ' ') !== false ? trim(substr($msg, strpos($msg, ' ') + 1)) : '';
 		switch (strtolower($cmd)) {
-			case 'join':
-			case 'j':
-				$this->join($param);
-				break;
-			case 'part':
-			case 'p':
-				$reason = 'Leaving';
-				if (empty($param)) {
-					$channel = $destination;
-				} elseif (strpos($param, ' ') !== false) {
-					$channel = trim(substr($param, 0, strpos($param, ' ')));
-					$reason  = trim(substr($param, strpos($param, ' ') + 1));
-				} else {
-					$channel = $param;
-				}
-				$this->part($channel, $reason);
-				break;
-			case 'op':
-				$this->op($destination, $param);
-				break;
-			case 'deop':
-				$this->deop($destination, $param);
-				break;
-			case 'voice':
-				$this->voice($destination, $param);
-				break;
-			case 'devoice':
-				$this->devoice($destination, $param);
-				break;
-			case 'who':
-				$this->who($param);
-				break;
 			case 'version':
 				$this->action($param, "VERSION");
 				break;
@@ -108,12 +77,6 @@ class ircClient extends socketClient {
 				} else {
 					$this->set_mode($who, $mode);
 				}
-			case 'ban':
-
-				break;
-			case 'unban':
-
-				break;
 			case 'kick':
 				$who     = (strpos($param, ' ') !== false) ? trim(substr($param, 0, strpos($param, ' '))) : $param;
 				$reason  = (strpos($param, ' ') !== false) ? trim(substr($param, strpos($param, ' ')))    : '';
@@ -127,16 +90,6 @@ class ircClient extends socketClient {
 				$where = strpos($param, ' ') !== false ? trim(substr($param, strpos($param, ' ') + 1)) : $destination;
 				$this->invite($where, $param);
 				break;
-			case 'nickname':
-			case 'nick':
-				$this->nick($param);
-				break;
-			case 'whowas':
-				$this->whowas($param);
-				break;
-			case 'whois':
-				$this->whois($param);
-				break;
 			case 'me':
 			case 'action':
 				$this->action($destination, $param);
@@ -146,7 +99,6 @@ class ircClient extends socketClient {
 				break;
 			case 'msg':
 			case 'privmsg':
-			case 'tell':
 				$who = strpos($param, ' ') !== false ? trim(substr($param, 0, strpos($param, ' ')))  : $param;
 				$msg = strpos($param, ' ') !== false ? trim(substr($param, strpos($param, ' ') + 1)) : '';
 				$this->message($who, $msg);
@@ -158,7 +110,7 @@ class ircClient extends socketClient {
 				$this->notice($destination, $param);
 				break;
 			default:
-				$this->send_script("chat.onError('Unrecognised command: ".htmlentities($cmd, ENT_QUOTES, 'UTF-8')."');");
+				$this->write($cmd . " " . $param . "\r\n");
 		}
 	}
 
@@ -602,7 +554,7 @@ class ircClient extends socketClient {
 			if ($key == 'motd') {
 				$lines = explode("\n", $this->server_info['motd']);
 				foreach ($lines as $line) {
-					$line = htmlspecialchars($line, ENT_QUOTES, 'UTF-8');
+					$line = htmlentities($line, ENT_QUOTES, 'UTF-8');
 					$this->send_script("chat.onMotd('$line');");
 				}
 			} else {
@@ -849,6 +801,7 @@ class ircClient extends socketClient {
 	private function on_readln($string)
 	{
 		global $daemon;
+		echo "IRC IN " . $this->key . ": " . $string . "\n";
 		if (substr($string, 0, 1) == ':') {
 			$string = substr($string, 1);
 			$match  = explode(' ', $string);
@@ -895,7 +848,7 @@ class ircClient extends socketClient {
 
 	public function send_script($msg)
 	{
-		echo "[SCRIPT] $msg\n";
+		echo "[SCRIPT: " . $this->key . "] $msg\n";
 		$this->output .= "<script type=\"text/javascript\">\n$msg\n</script>\n";
 		$this->handle_write();
 	}
@@ -903,7 +856,7 @@ class ircClient extends socketClient {
 	public function on_connect()
 	{
 		$this->send_script("chat.onConnecting();");
-		$this->write("USER {$this->nick} 0 chabotc.nl :IP {$this->client_address}\r\n");
+		$this->write("USER foobar 0 chabotc.nl :IP {$this->client_address}\r\n");
 		$this->write("NICK {$this->nick}\r\n");
 	}
 

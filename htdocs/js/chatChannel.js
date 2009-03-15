@@ -38,19 +38,16 @@ chatChannel.prototype = {
 		$(this.divSizer).observe("mousedown", this.eventMouseDown);
 		this.hide();
 		if (this.channel != 'info') {
-			$(this.divButton).hide();
-			new Effect.Appear($(this.divButton), { duration : 0.4 });
 			$(this.divHeaderClose).onclick = this.close.bindAsEventListener(this);
 		} else {
 			$(this.divNames).setStyle({width : '0px'});
 			$(this.divSizer).hide();
 			$(this.divNames).hide();
 		}
-		setTimeout('chat.createSortable();', 10);
 	},
 
 	destroy: function() {
-		new Effect.Fade(this.divButton, {duration : 0.4, afterFinish: function(effect) { Element.remove(effect.element)} });
+		$(this.divButton).hide();
 		this.members.destroy();
 		if (this.channel != 'info') {
 			$(this.divHeaderClose).stopObserving('click');
@@ -61,7 +58,6 @@ chatChannel.prototype = {
 		if (chat.current == this.channel) {
 			chat.channel('info').show();
 		}
-		setTimeout('chat.createSortable();', 10);
 	},
 
 	close: function() {
@@ -174,7 +170,6 @@ chatChannel.prototype = {
 		var elementDimensions = $(this.divNames).getDimensions();
 		this.whoOriginalHeight = elementDimensions.height;
 		this.whoOriginalWidth  = elementDimensions.width - 2;
-		new Effect.Scale(this.divNames, 10, { duration: 0.6, scaleContent: false, scaleY: false, afterFinish: function(effect) { $(chatChannelResizing.divWhoSizer).setStyle({backgroundImage : "url('/images/expand.gif')"}); $(chatChannelResizing.divNames).setStyle({ backgroundColor : '#deecfd'}); chat.onResize();} });
 	},
 
 	expandWho: function() {
@@ -185,7 +180,6 @@ chatChannel.prototype = {
 		var pageWidth  = (document.documentElement.clientWidth  || window.document.body.clientWidth);
 		$(this.divMessages).setStyle({ width : (pageWidth - this.whoOriginalWidth - 16) +'px' });
 		$(this.divMessagesContent).setStyle({ width : (pageWidth - this.whoOriginalWidth - 16) +'px' });
-		new Effect.Scale(this.divNames, 100, { duration: 0.6, scaleFrom: 10, scaleContent: false, scaleY: false, scaleMode: { originalHeight: this.whoOriginalHeight, originalWidth: this.whoOriginalWidth }, afterFinish: function(effect) { $(chatChannelResizing.divWhoSizer).setStyle({backgroundImage : "url('/images/collapse.gif')"}); $(chatChannelResizing.divSizer).show(); $(chatChannelResizing.divWhoContent).show(); $(chatChannelResizing.divWhoTitle).show(); chat.onResize(); }});
 	},
 
 	show: function() {

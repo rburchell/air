@@ -15,7 +15,6 @@ var chat = {
 	current      : false,
 	disconnected : false,
 	listWindow   : false,
-	connectWindow: false,
 
 	initialize: function() {
 		chat.disconnected = false;
@@ -24,17 +23,25 @@ var chat = {
 		chat.addChannel('info');
 		chat.channel('info').show();
 		chat.onResize();
-		chat.showConnect();
+		chat.tryConnect();
 	},
 
-	showConnect: function() {
-		chat.connectWindow = new chatConnectWindow('connect', {allowResize : false, allowClose : false, allowDrag : true, width: 304, height: 232, zIndex:1001});
-		chat.connectWindow.show();
+	getparam: function(name) {
+		name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+		var regexS = "[\\?&]"+name+"=([^&#]*)";
+		var regex = new RegExp( regexS );
+		var results = regex.exec( window.location.href );
+		if( results == null )
+			return "";
+		else
+			return results[1];
+	},
+
+	tryConnect: function() {
+		this.connect(this.getparam("nickname"), "127.0.0.1");
 	},
 
 	connect: function(nickname, server) {
-		chat.connectWindow.destroy();
-		chat.connectWindow = false;
 		chat.nickname      = nickname;
 		chat.server        = server;
 		chat.initializeIframe();
@@ -71,10 +78,6 @@ var chat = {
 	    return undefined;
 	},
 
-	createSortable: function() {
-		Sortable.create('toolbar', {tag: 'div', only : 'channel_button', ghosting : false, constraint : 'horizontal', overlap : 'horizontal', scroll : window });
-	},
-
 	add: function(channel, message) {
 		if (chat.channel(channel) != undefined) {
 			chat.channel(channel).add(message);
@@ -103,10 +106,6 @@ var chat = {
 	},
 
 	onMotd: function(motd) {
-		if (chat.connectWindow != false) {
-			chat.connectWindow.destroy();
-			chat.connectWindow = false;
-		}
 		chat.add('info', '<span class="notice">'+motd+'</span>');
 	},
 
@@ -368,7 +367,7 @@ var chat = {
 		});
 		chat.connection = false;
 		$('comet_iframe').remove();
-		setTimeout("chat.showConnect();",100);
+		setTimeout("chat.tryConnect();",100);
 	},
 
 	onUnload: function() {
