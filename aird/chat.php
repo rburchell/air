@@ -18,11 +18,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-include("libs/socket.php");
-include("httpServer.php");
-include("ircClient.php");
-include("chatLog.php");
-
 ini_set('max_execution_time', '0');
 ini_set('assert.bail', false);
 ini_set('max_input_time', '0');
@@ -32,7 +27,34 @@ ini_set('default_socket_timeout','10');
 ini_set('memory_limit','512M');
 set_time_limit(0);
 
+function __autoload($sClass)
+{
+	AirD::Log(AirD::LOGTYPE_INTERNAL, "Loading " . $sClass);
+	require_once("./" . $sClass . ".php");
 
-$daemon = new socketDaemon();
-$server = $daemon->create_server('httpdServer', 'httpdServerClient', 0, 2001);
+	if (!class_exists($sClass))
+		AirD::Log(AirD::LOGTYPE_INTERNAL, "Loaded " . $sClass . " as a file, but class still doesn't exist. Aiee.");
+}
+
+abstract class AirD
+{
+	const VERSION_STRING = "1.0";
+
+	const LOGTYPE_INTERNAL = "INTERNAL";
+	const LOGTYPE_HTTP = "HTTP";
+	const LOGTYPE_IRC = "IRC";
+	const LOGTYPE_JAVASCRIPT = "JAVASCRIPT";
+
+	public static function Log($sType, $sMessage, $bDebug = false)
+	{
+		echo $sType . ": " . $sMessage . "\n";
+	}
+}
+
+
+AirD::Log(AirD::LOGTYPE_INTERNAL, "AirD " . AirD::VERSION_STRING . " starting up...");
+
+// Stuff relies on this name. Unfortunately.
+$daemon = new SocketEngine();
+$daemon->create_server('HTTPServer', 'httpdServerClient', 0, 2001);
 $daemon->process();

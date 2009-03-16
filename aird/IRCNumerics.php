@@ -17,7 +17,9 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-$irc_codes = array(
+abstract class IRCNumerics
+{
+	public static $lookup = array(
 	'001' => 'RPL_WELCOME',
 	'002' => 'RPL_YOURHOST',
 	'003' => 'RPL_CREATED',
@@ -156,4 +158,6 @@ $irc_codes = array(
 	'491' => 'ERR_NOOPERHOST',
 	'501' => 'ERR_UMODEUNKNOWNFLAG',
 	'502' => 'ERR_USERSDONTMATCH'
-);
+	);
+}
+?>

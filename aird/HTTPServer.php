@@ -17,7 +17,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-class httpdServer extends socketServer {}
+class HTTPServer extends socketServer {}
 
 class httpdServerClient extends socketServerClient {
 	private $accepted;
@@ -73,8 +73,8 @@ class httpdServerClient extends socketServerClient {
 					$nickname               = isset($params['nickname']) ? $params['nickname'] : 'chabot';
 					$channel                = isset($params['channel'])  ? $params['channel']  : 'chatprototype';
 					$server = "127.0.0.1";
-					echo "HTTP CONNECT: " . $nickname . " to " . $server . "\n";
 					$this->key              = md5("{$this->remote_address}:{$nickname}:{$server}:{$channel}".rand());
+					AirD::Log(AirD::LOGTYPE_HTTP, "New connection from " . $this->remote_address . " to " . $server . " with nickname " . $nickname . " - unique key: " . $this->key);
 					// created paired irc client
 					$client                 = $daemon->create_client('ircClient', $server, 6667);
 					$client->server         = $server;
@@ -96,8 +96,8 @@ class httpdServerClient extends socketServerClient {
 					}
 					break;
 				case '/message':
-					echo "HTTP: Got a message, key is " . $params['key'] . " and msg is " . $params['msg'] . "\n";
 					if (!empty($params['key']) && !empty($params['msg'])) {
+						AirD::Log(AirD::LOGTYPE_HTTP, "Got a command from client " . $params['key'] . ": " . urldecode($params['msg']),  true);
 						foreach ($daemon->clients as $socket) {
 							if (isset($socket->key) && get_class($socket) == 'ircClient' && $socket->key == $params['key']) {
 								$channel = isset($params['channel']) ? urldecode($params['channel']) : $socket->channel;
@@ -116,7 +116,7 @@ class httpdServerClient extends socketServerClient {
 					break;
 				default:
 					$request['url'] = str_replace('..', '', $request['url']);
-					$file = './htdocs'.$request['url'];
+					$file = '../htdocs'.$request['url'];
 					if (file_exists($file) && is_file($file)) {
 						// rewrite header
 						$header  = "HTTP/{$request['version']} 200 OK\r\n";

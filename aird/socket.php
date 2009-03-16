@@ -1,8 +1,4 @@
 <?
-require_once('socketClient.php');
-require_once('socketServer.php');
-require_once('socketServerClient.php');
-require_once('socketDaemon.php');
 if (!defined('SOL_TCP')) {
 	// sometimes not defined oddly enough
 	define('SOL_TCP', 6);

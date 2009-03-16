@@ -1,5 +1,6 @@
 <?
-class socketDaemon {
+class SocketEngine
+{
 	public $servers = array();
 	public $clients = array();
 

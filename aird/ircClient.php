@@ -17,7 +17,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-require('ircDefines.php');
 require('ircChannel.php');
 
 class ircClient extends socketClient {
@@ -46,12 +45,15 @@ class ircClient extends socketClient {
 	private function escape($s)
 	{
 		$s = str_replace("\\", "\\\\", $s);
-		return htmlentities($s, ENT_QUOTES, 'UTF-8');
+		$s = htmlentities($s, ENT_QUOTES, 'UTF-8');
+		while (strpos($s, "  ") !== false)
+			$s = str_replace("  ", "&nbsp;&nbsp;", $s);
+		return $s;
 	}
 
 	private function user_command($destination, $msg)
 	{
-		echo "USER CMD " . $this->key . " " . $destination . " " . $msg . "\n";
+		AirD::Log(AirD::LOGTYPE_IRC, "Processing user command for client " . $this->key . " with destination " . $destination . ": " . $msg, true);
 		$cmd   = trim(substr($msg, 1, strpos($msg, ' '))) != '' ? trim(substr($msg, 1, strpos($msg, ' '))) : trim(substr($msg, 1));
 		$param = strpos($msg, ' ') !== false ? trim(substr($msg, strpos($msg, ' ') + 1)) : '';
 		switch (strtolower($cmd)) {
@@ -71,7 +73,6 @@ class ircClient extends socketClient {
 				if (empty($param)) {
 					$this->get_topic($destination);
 				} else {
-					echo "MSG was: $msg\n";
 					$this->set_topic($destination, $param);
 				}
 				break;
@@ -152,7 +153,6 @@ class ircClient extends socketClient {
 
 	public function set_topic($channel, $topic)
 	{
-		echo "TOPIC $channel :$topic\r\n";
 		$this->write("TOPIC $channel :$topic\r\n");
 	}
 
@@ -274,7 +274,6 @@ class ircClient extends socketClient {
 			$msg   = trim(substr($msg, 0, $pos));
 		}
 		$action = strtolower(trim($msg));
-		echo "[ctcp] $from $action\n";
 		switch ($action) {
 			case 'ping':
 				$this->write("NOTICE $from :".chr(1)."PING $param".chr(1)."\r\n");
@@ -301,21 +300,19 @@ class ircClient extends socketClient {
 		$arg    = substr($arg, 0, strlen($arg) - 1);
 		switch ($action) {
 			case 'action':
-				echo "[IRC] ctcp $from ($channel): $arg\n";
 				$from    = $this->escape($from);
 				$channel = $this->escape($channel);
 				$arg     = $this->escape($arg);
 				$this->send_script("chat.onAction('$channel', '$from', '$arg');");
 				break;
 			default:
-				echo "Unknown ctcp action: $action\n";
+				AirD::Log(AirD::LOGTYPE_IRC, "Unknown CTCP: " . $action . "\n", true);
 				break;
 		}
 	}
 
 	public function on_nick($from, $to)
 	{
-		echo "[IRC] $from sets nickname to $to\n";
 		if (is_array($this->channels)) {
 			foreach ($this->channels as $channel) {
 				$channel->on_nick($from, $to);
@@ -423,7 +420,7 @@ class ircClient extends socketClient {
 
 	public function on_error($error)
 	{
-		echo "[IRC] error: $error\n";
+		AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got error: " . $error);
 		$error = $this->escape($error);
 		$this->send_script("chat.onError('$error');");
 		$this->close();
@@ -453,7 +450,6 @@ class ircClient extends socketClient {
 
 	public function on_parted($channel)
 	{
-		echo "On parted $channel\n";
 	}
 
 	public function on_join($who, $channel)
@@ -705,34 +701,31 @@ class ircClient extends socketClient {
 
 	private function handle_server_message($from, $command, $to, $param)
 	{
-		global $irc_codes;
-		//echo "[SMSG] [$from], [$command], [$to], [$param]\n";
+		AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " processing server message from " . $from . " => " . $to . ": " . $command . " (" . $param. ")", true);
 		if (substr($param, 0, 1) == ':') {
 			$param = substr($param, 1);
 		}
-		if (is_numeric($command) && isset($irc_codes[$command])) {
-			$function = strtolower($irc_codes[$command]);
+		if (is_numeric($command) && isset(IRCNumerics::$lookup[$command])) {
+			$function = strtolower(IRCNumerics::$lookup[$command]);
 			if (is_callable(array($this, $function))) {
-				echo "[IRC] $function($from, $command, $to, $param)\n";
 				$this->$function($from, $command, $to, $param);
 			} elseif (substr($function, 0, 4) == 'err_') {
 				$this->err_generic($from, $command, $to, $param);
 			} else {
-				echo "[IRC] $command : un-implimented command: $function\n[$command] $from, $to, $param\n";
+				AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented message " . $command);
 			}
 		} elseif ($command == 'NOTICE') {
 			$this->on_server_notice($param);
 		} elseif ($command == 'MODE') {
 			$this->on_mode($from, $command, $to, $param);
 		} else {
-			echo "[IRC] unrecognized command code: $command from: $from, to: $to, params: $param\n";
+			AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented message " . $command);
 		}
 	}
 
 	private function handle_message($from, $command, $to, $param, $who)
 	{
-		global $irc_codes;
-		// echo "[MSG] [$from], [$command], [$to], [$param]\n";
+		AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " processing message from " . $from . " => " . $to . ": " . $command . " (" . $param. ") - " . $who, true);
 		if (substr($to,0,1) == ':') {
 			$to = substr($to,1);
 		}
@@ -759,7 +752,6 @@ class ircClient extends socketClient {
 				$this->on_notice($from, $param);
 				break;
 			case 'KICK':
-				echo "[KICK] $from, $command, $to, $param, $who\n";
 				$this->on_kick($to, $from, $who, $param);
 				break;
 			case 'QUIT':
@@ -786,18 +778,17 @@ class ircClient extends socketClient {
 				$this->on_nick($from, $param);
 				break;
 			default:
-				if (is_numeric($command) && isset($irc_codes[$command])) {
-					$function = strtolower($irc_codes[$command]);
+				if (is_numeric($command) && isset(IRCNumerics::$lookup[$command])) {
+					$function = strtolower(IRCNumerics::$lookup[$command]);
 					if (is_callable(array($this, $function))) {
-						echo "[IRC] $function($from, $command, $to, $param)\n";
 						$this->$function($from, $command, $to, $param);
 					} elseif (substr($function, 0, 4) == 'err_') {
 						$this->err_generic($from, $command, $to, $param);
 					} else {
-						echo "Uncaught message ($command): [$from] [$command] [$to] $param\n";
+						AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented client message " . $command);
 					}
 				} else {
-					echo "Uncaught message ($command): [$from] [$command] [$to] $param\n";
+					AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented client message " . $command);
 				}
 		}
 	}
@@ -805,7 +796,6 @@ class ircClient extends socketClient {
 	private function on_readln($string)
 	{
 		global $daemon;
-		echo "IRC IN " . $this->key . ": " . $string . "\n";
 		if (substr($string, 0, 1) == ':') {
 			$string = substr($string, 1);
 			$match  = explode(' ', $string);
@@ -832,7 +822,7 @@ class ircClient extends socketClient {
 		} elseif (substr($string, 0, 5) == 'ERROR') {
 			$this->on_error(substr($string, 6));
 		} else {
-			echo "[UNKNOWN MSG] $string\n";
+			AirD::Log(AirD::LOGTYPE_IRC, "Weird unknown string: " . $string);
 		}
 		$this->handle_write();
 	}
@@ -852,7 +842,7 @@ class ircClient extends socketClient {
 
 	public function send_script($msg)
 	{
-		echo "[SCRIPT: " . $this->key . "] $msg\n";
+		AirD::Log(AirD::LOGTYPE_JAVASCRIPT, "Sending to " . $this->key . ": " . $msg);
 		$this->output .= "<script type=\"text/javascript\">\n$msg\n</script>\n";
 		$this->handle_write();
 	}
