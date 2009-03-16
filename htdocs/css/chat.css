@@ -189,19 +189,6 @@ span.privmsg {
 	white-space			: nowrap;
 }
 
-.who_sizer {
-    line-height			: 1px;
-    font-size			: 1px;
-    background-image	: url('/images/collapse.gif');
-    width				: 12px;
-    height				: 11px;
-    margin-top			: 5px;
-    margin-right		: 5px;
-    cursor				: pointer;
-    z-index				: 10;
-    float				: right;
-}
-
 #new_channel.channel_button {
 }
 

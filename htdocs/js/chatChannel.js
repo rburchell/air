@@ -14,7 +14,6 @@ chatChannel.prototype = {
 		this.divMain            = 'channel_'+this.channel;
 		this.divNames           = 'names_'+this.channel;
 		this.divWhoHeader       = 'who_header_' + this.channel;
-		this.divWhoSizer        = 'who_sizer_'+this.channel;
 		this.divWhoContent      = 'who_content_' + this.channel;
 		this.ulWhoContent       = 'who_content_ul_' + this.channel;
 		this.divWhoTitle        = 'who_title_' + this.channel;
@@ -25,12 +24,10 @@ chatChannel.prototype = {
 		this.divButton          = 'channel_button_'+this.channel;
 		this.divSizer           = 'sizer_'+this.channel;
 		this.divTopic           = 'messages_topic_' + this.channel;
-		this.createLayout();
 		this.members            = new chatMembers(this.channel, this.ulWhoContent, this.divWhoTitle, this);
 		$(this.divMessagesHeader).update(this.channel+'<span id="'+this.divTopic+'"></span>');
 		var close = this.channel != 'info' ? '<div class="tab_close" id="'+this.divHeaderClose+'"></div>' : '';
 		new Insertion.Bottom('toolbar', '<div class="channel_button" id="'+this.divButton+'"><div class="tab_left"></div><div class="tab_center">'+close+this.channel+'</div><div class="tab_right"></div></div>');
-		$(this.divWhoSizer).onclick = this.collapseWho.bindAsEventListener(this);
 		$(this.divButton).onclick   = this.show.bindAsEventListener(this);
 		this.eventMouseDown = this.initDrag.bindAsEventListener(this);
 		this.eventMouseMove = this.updateDrag.bindAsEventListener(this);
@@ -64,57 +61,6 @@ chatChannel.prototype = {
 		this.closing = true;
 		chat.message('/part '+this.channel);
 		return true;
-	},
-
-	createLayout: function() {
-		var div1 = document.createElement('DIV');
-		div1.setAttribute('id', this.divMain);
-		div1.className     = 'channel';
-		var div2 = document.createElement('DIV');
-		div2.setAttribute('id', this.divNames);
-		div2.className     = 'names';
-		div1.appendChild(div2);
-		var div3 = document.createElement('DIV');
-		div3.setAttribute('id', this.divWhoHeader);
-		div3.className     = 'header';
-		div2.appendChild(div3);
-		var div10 = document.createElement('DIV');
-		div10.setAttribute('id', this.divWhoSizer);
-		div10.className     = 'who_sizer';
-		div3.appendChild(div10);
-		var span1 = document.createElement('SPAN');
-		div10.appendChild(span1);
-		var div9 = document.createElement('DIV');
-		div9.setAttribute('id', this.divWhoTitle);
-		div9.className     = 'who_title';
-		div3.appendChild(div9);
-		var div4 = document.createElement('DIV');
-		div4.setAttribute('id', this.divWhoContent);
-		div4.className     = 'who_content';
-		div2.appendChild(div4);
-		var ul1 = document.createElement('UL');
-		ul1.setAttribute('id', this.ulWhoContent);
-		ul1.className     = 'who_ul';
-		div4.appendChild(ul1);
-		var div8 = document.createElement('DIV');
-		div8.setAttribute('id', this.divSizer);
-		div8.className     = 'sizer';
-		div1.appendChild(div8);
-		var span1 = document.createElement('SPAN');
-		div8.appendChild(span1);
-		var div5 = document.createElement('DIV');
-		div5.setAttribute('id', this.divMessages);
-		div5.className     = 'messages';
-		div1.appendChild(div5);
-		var div6 = document.createElement('DIV');
-		div6.setAttribute('id', this.divMessagesHeader);
-		div6.className     = 'header';
-		div5.appendChild(div6);
-		var div7 = document.createElement('DIV');
-		div7.setAttribute('id', this.divMessagesContent);
-		div7.className     = 'messages_content';
-		div5.appendChild(div7);
-		$('main').appendChild(div1);
 	},
 
 	onResize: function() {
@@ -158,28 +104,6 @@ chatChannel.prototype = {
 		Event.stopObserving(document, "mousemove", this.eventMouseMove);
 		document.body.ondrag        = null;
 		document.body.onselectstart = null;
-	},
-
-	collapseWho: function() {
-		$(this.divSizer).hide();
-		$(this.divWhoContent).hide();
-		$(this.divWhoTitle).hide();
-		chatChannelResizing = this;
-		Event.stopObserving(this.divWhoSizer, 'click');
-		$(this.divWhoSizer).onclick = this.expandWho.bindAsEventListener(this);
-		var elementDimensions = $(this.divNames).getDimensions();
-		this.whoOriginalHeight = elementDimensions.height;
-		this.whoOriginalWidth  = elementDimensions.width - 2;
-	},
-
-	expandWho: function() {
-		$(this.divNames).setStyle({ backgroundColor : '#ffffff'});
-		Event.stopObserving(this.divWhoSizer, 'click');
-		$(this.divWhoSizer).onclick = this.collapseWho.bindAsEventListener(this);
-		chatChannelResizing = this;
-		var pageWidth  = (document.documentElement.clientWidth  || window.document.body.clientWidth);
-		$(this.divMessages).setStyle({ width : (pageWidth - this.whoOriginalWidth - 16) +'px' });
-		$(this.divMessagesContent).setStyle({ width : (pageWidth - this.whoOriginalWidth - 16) +'px' });
 	},
 
 	show: function() {
