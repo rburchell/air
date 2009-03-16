@@ -45,8 +45,8 @@ class ircClient extends socketClient {
 	{
 		$s = str_replace("\\", "\\\\", $s);
 		$s = htmlentities($s, ENT_QUOTES, 'UTF-8');
-		while (strpos($s, "  ") !== false)
-			$s = str_replace("  ", "&nbsp;&nbsp;", $s);
+//		while (strpos($s, "  ") !== false)
+//			$s = str_replace("  ", "&nbsp;&nbsp;", $s);
 		return $s;
 	}
 

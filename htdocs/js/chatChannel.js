@@ -163,9 +163,15 @@ chatChannel.prototype = {
 			}
 			this.messageCounter -= 10;
 		}
+		var parsedmessage = this.smilify(this.colorize(this.linkify(message)));
+
+		// Also fix double spaces, we must do this AFTER url modifications etc.
+		var dbsp = /\s{2}/g;
+		parsedmessage = parsedmessage.replace(dbsp, "&nbsp;&nbsp;");
+
 		var div1        = document.createElement('DIV');
 		div1.className  = 'message';
-		div1.innerHTML  = this.smilify(this.colorize(this.linkify(message)));
+		div1.innerHTML  = parsedmessage;
 		$(this.divMessagesContent).appendChild(div1);
 		$(this.divMessagesContent).scrollTop = $(this.divMessagesContent).lastChild.offsetTop;
 		this.messageCounter++;
@@ -224,7 +230,8 @@ chatChannel.prototype = {
 	},
 
 	linkify: function(message) {
-		var urlRegex = /\b(https?:\/\/[^\s+\"\<\>]+)/igm;
+		var urlRegex = /\b(https?:\/\/\S+)/ig;
+			///\b(https?:\/\/[^\s+\"\<\>]+)/igm;
 		if (urlRegex.test(message)) {
 			return message.replace(urlRegex, "<a href=\"$1\" title=\"$1\" target=\"_blank\">$1</a>");
 		}
