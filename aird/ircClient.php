@@ -725,13 +725,14 @@ class ircClient extends socketClient {
 
 	private function handle_message($from, $command, $to, $param, $who)
 	{
-		AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " processing message from " . $from . " => " . $to . ": " . $command . " (" . $param. ") - " . $who, true);
 		if (substr($to,0,1) == ':') {
 			$to = substr($to,1);
 		}
 		if (strpos($from, '!') !== false) {
 			$from = substr($from, 0, strpos($from, '!'));
 		}
+		AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " processing message from " . $from . " => " . $to . ": " . $command . " (" . $param. ") - " . $who, true);
+		// IRC: Client 56e2407a1d19ca64e988283c505ae74e processing message from test => test2: NICK (test!robin@testnet.user NICK test2) - 
 		switch ($command) {
 			case 'PRIVMSG':
 				if ($to == $this->nick) {
@@ -775,7 +776,7 @@ class ircClient extends socketClient {
 				$this->on_mode($from, $command, $to, $param);
 				break;
 			case 'NICK':
-				$this->on_nick($from, $param);
+				$this->on_nick($from, $to);
 				break;
 			default:
 				if (is_numeric($command) && isset(IRCNumerics::$lookup[$command])) {
