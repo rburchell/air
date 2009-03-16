@@ -95,8 +95,9 @@ class SocketEngine
 		$write_set     = $this->create_write_set();
 		$exception_set = $this->create_exception_set();
 		$event_time    = time();
-		while (($events = socket_select($read_set, $write_set, $exception_set, 2)) !== false) {
+		while (($events = socket_select($read_set, $write_set, $exception_set, null)) !== false) {
 			if ($events > 0) {
+				AirD::Log(AirD::LOGTYPE_INTERNAL, "Processing " . $events . " socket events", true);
 				foreach ($read_set as $socket) {
 					$socket = $this->get_class($socket);
 					if (is_subclass_of($socket,'socketServer')) {
