@@ -74,7 +74,7 @@ class httpdServerClient extends socketServerClient {
 					$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
 					// streaming iframe/comet communication (hanging get), don't send content-length!
 					$nickname               = isset($params['nickname']) ? $params['nickname'] : 'chabot';
-					$server = "127.0.0.1";
+					$server = "208.68.93.158";
 					$this->key              = md5("{$this->remote_address}:{$nickname}:{$server}:{$channel}".rand());
 					AirD::Log(AirD::LOGTYPE_HTTP, "New connection from " . $this->remote_address . " to " . $server . " with nickname " . $nickname . " - unique key: " . $this->key);
 					// created paired irc client
