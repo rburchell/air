@@ -62,13 +62,38 @@ chatEditor.prototype = {
 		this.doc = $('editor_edit').contentWindow.document;
 		this.doc.designMode = 'on';
 		this.createMenu();
-		// listen for Return key, which triggers the 'send' event
-		Event.observe(this.doc, 'keydown', function(event) {
-			if (event.keyCode == Event.KEY_RETURN && !event.shiftKey) {
-				this.send();
-				return false;
-			} else if (event.keyCode == Event.KEY_RETURN && parseFloat($(this.sizer.divSend).getStyle('height')) < 60) {
-				this.sizer.resize(80);
+
+		// Monitor keystrokes.
+		Event.observe(this.doc, 'keydown', function(event)
+		{
+			switch (event.keyCode)
+			{
+				case Event.KEY_RETURN:
+					// Send the message off to the server of oz.
+					if (!event.shiftKey)
+					{
+						this.send();
+						return false;
+					}
+
+					// No, I have no idea what this is for.
+					if (parseFloat($(this.sizer.divSend).getStyle('height')) < 60)
+					{
+						this.sizer.resize(80);
+					}
+					break;
+				case Event.KEY_TAB:
+					alert("Tab completion ain't done. Live with it. Sorry.");
+					return false;
+					break;
+				case Event.KEY_DOWN:
+					alert("History ain't done. Live with it. Sorry.");
+					return false;
+					break;
+				case Event.KEY_UP:
+					alert("History ain't done. Live with it. Sorry.");
+					return false;
+					break;
 			}
 		}.bind(this));
 		this.focus();
