@@ -59,6 +59,9 @@ class httpdServerClient extends socketServerClient {
 				}
 				$request['url'] = substr($request['url'], 0, strpos($request['url'], '?'));
 			}
+
+			// XXX: By outputting cache control and expires here, we are preventing clients from caching images -- this is not good.
+			// Granted, this isn't that big a problem under small load, but it won't scale.
 			$header  = "HTTP/{$request['version']} 200 OK\r\n";
 			$header .= "Accept-Ranges: bytes\r\n";
 			$header .= 'Last-Modified: '.gmdate('D, d M Y H:i:s T', time())."\r\n";
