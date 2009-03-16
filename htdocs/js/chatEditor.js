@@ -63,6 +63,10 @@ chatEditor.prototype = {
 		this.doc.designMode = 'on';
 		this.createMenu();
 
+		// Command history holder.
+		this.commandHistory = new Array();
+		this.historyPos = 0;
+
 		// Monitor keystrokes.
 		Event.observe(this.doc, 'keydown', function(event)
 		{
@@ -87,11 +91,19 @@ chatEditor.prototype = {
 					return false;
 					break;
 				case Event.KEY_DOWN:
-					alert("History ain't done. Live with it. Sorry.");
+					var item = this.historyGetNext();
+					if (item != null)
+					{
+						this.doc.body.innerHTML = item;
+					}
 					return false;
 					break;
 				case Event.KEY_UP:
-					alert("History ain't done. Live with it. Sorry.");
+					var item = this.historyGetPrevious();
+					if (item != null)
+					{
+						this.doc.body.innerHTML = item;
+					}
 					return false;
 					break;
 			}
@@ -111,6 +123,9 @@ chatEditor.prototype = {
 				chat.message(msg);
 			}
 		});
+
+		// Add this item to history.
+		this.historyAddItem(this.doc.body.innerHTML);
 		setTimeout("chat.editor.clear();",10);
 	},
 
@@ -122,6 +137,60 @@ chatEditor.prototype = {
 	clear: function() {
 		this.doc.body.innerHTML = '&nbsp;';
 		this.focus();
+	},
+
+	/** Add an item to the command history.
+	 * @param item The item to add to the command history.
+	 * NOTE: Resets the user's position in the command history to the top of the stack.
+	 */
+	historyAddItem: function(item)
+	{
+		this.commandHistory[0] = item;
+
+		// Don't allow duplicate items -- just re-blank it
+		if (this.commandHistory[0] == this.commandHistory[1])
+			this.commandHistory[0] = "";
+		else
+		{
+			// Don't allow indefinite growth
+			if (this.commandHistory.length > 100)
+			{
+				this.commandHistory.pop();
+			}
+
+			// Start a new blank item
+			this.commandHistory.unshift("");
+		}
+
+		// Restore pointer to the top of the history stack.
+		this.historyPos = 0;
+	},
+
+	/** Returns the previous (chronological) item in the command history, if one may be fetched.
+	 * @return Returns null if no item may be retrieved (i.e. none stored or already at the end), or the command string.
+	 * NOTE: Modifies the command history pointer.
+	 */
+	historyGetPrevious: function()
+	{
+		// Don't allow moving past the end of the stack.
+		if (this.historyPos >= this.commandHistory.length - 1)
+			return null;
+
+		// Return this string, change position for the future.
+		return this.commandHistory[this.historyPos++];
+	},
+
+	/** Returns the next (chronological) item in the command history, if one may be fetched.
+	 * @return Returns null if no item may be retrieved (i.e. none stored or already at the start), or the command string.
+	 * NOTE: Modifies the command history pointer.
+	 */
+	historyGetNext: function()
+	{
+		if (this.historyPos <= 0)
+			return null;
+
+		// Return this string, change position for the future.
+		return this.commandHistory[this.historyPos--];
 	},
 
 	closeMenus: function() {
