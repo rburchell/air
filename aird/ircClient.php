@@ -848,7 +848,7 @@ class ircClient extends socketClient {
 
 	public function on_connect()
 	{
-		$this->send_script("chat.onConnecting();");
+		$this->send_script("chat.onSetGUIVersion('" . AirD::VERSION_STRING . "');chat.onConnecting();");
 		$this->write("USER foobar 0 chabotc.nl :IP {$this->client_address}\r\n");
 		$this->write("NICK {$this->nick}\r\n");
 	}

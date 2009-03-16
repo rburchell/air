@@ -240,6 +240,10 @@ var chat = {
 		chat.add('info', '<span class="notice">End of who</span>');
 	},
 
+	onSetGUIVersion: function(verstring) {
+		$('version').innerHTML = verstring;
+	},
+
 	onChannelMode: function(channel, mode) {
 		chat.add(channel, '<span class="notice">channel mode set to '+mode+'</span>')
 	},
