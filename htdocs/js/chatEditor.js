@@ -65,7 +65,7 @@ chatEditor.prototype = {
 
 		// Command history holder.
 		this.commandHistory = new Array();
-		this.historyPos = 0;
+		this.historyPos = -1;
 
 		// Monitor keystrokes.
 		Event.observe(this.doc, 'keydown', function(event)
@@ -95,6 +95,10 @@ chatEditor.prototype = {
 					if (item != null)
 					{
 						this.doc.body.innerHTML = item;
+					}
+					else
+					{
+						this.doc.body.innerHTML = "";
 					}
 					return false;
 					break;
@@ -145,11 +149,11 @@ chatEditor.prototype = {
 	 */
 	historyAddItem: function(item)
 	{
-		this.commandHistory[0] = item;
-
 		// Don't allow duplicate items -- just re-blank it
-		if (this.commandHistory[0] == this.commandHistory[1])
-			this.commandHistory[0] = "";
+		if (this.commandHistory[0] == item)
+		{
+			chat.debug("Not adding duplicate history item " + item);
+		}
 		else
 		{
 			// Don't allow indefinite growth
@@ -158,12 +162,14 @@ chatEditor.prototype = {
 				this.commandHistory.pop();
 			}
 
-			// Start a new blank item
-			this.commandHistory.unshift("");
+			chat.debug("Added item to command history, now " + this.commandHistory.length + " items. Item added is: " + item);
+
+			// Add the item.
+			this.commandHistory.unshift(item);
 		}
 
 		// Restore pointer to the top of the history stack.
-		this.historyPos = 0;
+		this.historyPos = -1;
 	},
 
 	/** Returns the previous (chronological) item in the command history, if one may be fetched.
@@ -173,11 +179,17 @@ chatEditor.prototype = {
 	historyGetPrevious: function()
 	{
 		// Don't allow moving past the end of the stack.
-		if (this.historyPos >= this.commandHistory.length - 1)
+		if (this.historyPos > this.commandHistory.length - 1)
 			return null;
 
+		chat.debug("GetPrevious: Returning history item " + this.historyPos + " which is: " + this.commandHistory[this.historyPos]);
+
+		this.historyPos++;
+		if (this.historyPos > this.commandHistory.length - 1)
+			this.historyPos = this.commandHistory.length - 1;
+
 		// Return this string, change position for the future.
-		return this.commandHistory[this.historyPos++];
+		return this.commandHistory[this.historyPos];
 	},
 
 	/** Returns the next (chronological) item in the command history, if one may be fetched.
@@ -186,11 +198,17 @@ chatEditor.prototype = {
 	 */
 	historyGetNext: function()
 	{
-		if (this.historyPos <= 0)
+		if (this.historyPos == 0)
 			return null;
 
+		chat.debug("GetNext: Returning history item " + this.historyPos + " which is: " + this.commandHistory[this.historyPos]);
+
+		this.historyPos--;
+		if (this.historyPos < 0)
+			this.historyPos = 0;
+
 		// Return this string, change position for the future.
-		return this.commandHistory[this.historyPos--];
+		return this.commandHistory[this.historyPos];
 	},
 
 	closeMenus: function() {

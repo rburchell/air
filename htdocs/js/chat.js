@@ -37,6 +37,12 @@ var chat = {
 			return results[1];
 	},
 
+	debug: function(message)
+	{
+		// XXX: Make this togglable.
+		chat.add("info", message);
+	},
+
 	tryConnect: function() {
 		chat.add("info", "Connecting to server...");
 		chat.nickname      =  this.getparam("nickname");
