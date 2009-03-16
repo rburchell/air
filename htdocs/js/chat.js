@@ -5,25 +5,25 @@
 var chat = {
 	nickname     : '',
 	server       : '',
-	version      : '0.2',
 	key          : false,
 	connection   : false,
+	connected    : false,
 	iframeDiv    : false,
 	timer        : false,
 	editor       : false,
 	channels     : [],
 	current      : false,
-	disconnected : false,
 	listWindow   : false,
+	reconnectdelay : 0,
 
 	initialize: function() {
-		chat.disconnected = false;
 		$('new_channel').observe("mousedown", chat.showList);
 		chat.editor = new chatEditor;
 		chat.addChannel('info');
 		chat.channel('info').show();
 		chat.onResize();
 		chat.tryConnect();
+		chat.timer = setTimeout('chat.frameCheck()', 10000);
 	},
 
 	getparam: function(name) {
@@ -38,12 +38,9 @@ var chat = {
 	},
 
 	tryConnect: function() {
-		this.connect(this.getparam("nickname"), "127.0.0.1");
-	},
-
-	connect: function(nickname, server) {
-		chat.nickname      = nickname;
-		chat.server        = server;
+		chat.add("info", "Connecting to server...");
+		chat.nickname      =  this.getparam("nickname");
+		chat.server        = "127.0.0.1";
 		chat.initializeIframe();
 	},
 
@@ -95,7 +92,10 @@ var chat = {
 	},
 
 	onConnecting: function() {
-		chat.add('info', '<span class="notice">Connecting to server</span>');
+		// Reset reconnect delay so we don't get huge delays after a long downtime
+		chat.reconnectdelay = 0;
+		connected = true;
+		chat.add('info', '<span class="notice">Connected to server</span>');
 	},
 
 	onServerInfo: function(what, info) {
@@ -334,8 +334,7 @@ var chat = {
 			chat.iframeDiv = chat.connection.createElement("div");
 			chat.connection.appendChild(chat.iframeDiv);
 			chat.connection.parentWindow.chat = chat;
-			chat.iframeDiv.innerHTML = "<iframe name='comet_iframe' id='comet_iframe' src='/get?nickname="+chat.nickname+"&server="+chat.server+"' onload='chat.frameDisconnected();'></iframe>";
-			//chat.timer = setTimeout('chat.frameCheck()', 500);
+			chat.iframeDiv.innerHTML = "<iframe name='comet_iframe' id='comet_iframe' src='/get?nickname="+chat.nickname+"&server="+chat.server+"' onload='chat.frameDisconnected(); onerror='chat.frameDisconnected();'></iframe>";
 		} else {
 			chat.connection = document.createElement('iframe');
 			chat.connection.setAttribute('id',     'comet_iframe');
@@ -348,30 +347,43 @@ var chat = {
 			}
 			chat.iframeDiv = document.createElement('iframe');
 			chat.iframeDiv.setAttribute('onLoad', 'chat.frameDisconnected()');
+			chat.iframeDiv.setAttribute('onError', 'chat.frameDisconnected()');
 			chat.iframeDiv.setAttribute('src',    '/get?nickname='+chat.nickname+'&server='+chat.server);
 			chat.connection.appendChild(chat.iframeDiv);
 			document.body.appendChild(chat.connection);
 
 		}
+
 	},
 
 	frameCheck: function() {
-		if ($('comet_iframe').readyState == "complete") {
+		if (chat.connected == false) 
+		{
+			// Add 500ms to the reconnect delay every time we are forced to reconnect, to gracefully not bombard the server with requests.
+			chat.reconnectdelay += 500;
+
+			// Don't stop an instant reconnect attempt, but if that fails, minimum wait is 5 seconds to stop server hammering.
+			if (chat.reconnectdelay > 0 && chat.reconnectdelay < 5000)
+				chat.reconnectdelay = 5000;
+			else if (chat.reconnectdelay > 50000) // Also cap at 50 seconds.
+				chat.reconnectdelay = 50000;
 			chat.frameDisconnected();
-		} else {
-			chat.timer = setTimeout('chat.frameCheck()', 500);
 		}
+
+		chat.timer = setTimeout('chat.frameCheck()', chat.reconnectdelay);
 	},
 
 	frameDisconnected: function() {
+		chat.add("info", "Disconnected. Reconnecting in " + (chat.reconnectdelay / 1000) + " seconds.");
 		$A(chat.channels).each(function(channel) {
 			if (channel.channel != 'info') {
 				channel.destroy();
 			}
 		});
+		chat.connected = false;
 		chat.connection = false;
 		$('comet_iframe').remove();
-		setTimeout("chat.tryConnect();",100);
+		chat.tryConnect();
 	},
 
 	onUnload: function() {
