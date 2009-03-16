@@ -118,6 +118,7 @@ class httpdServerClient extends socketServerClient {
 					$request['url'] = str_replace('..', '', $request['url']);
 					$file = '../htdocs'.$request['url'];
 					if (file_exists($file) && is_file($file)) {
+						AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a file: " . $file,  true);
 						// rewrite header
 						$header  = "HTTP/{$request['version']} 200 OK\r\n";
 						$header .= "Accept-Ranges: bytes\r\n";
@@ -126,6 +127,7 @@ class httpdServerClient extends socketServerClient {
 						$header .= "Content-Length: $size\r\n";
 						$output  = file_get_contents($file);
 					} else {
+						AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a NONEXISTANT file: " . $file,  true);
 						$output  = "<h1>404: Document not found.</h1>Couldn't find $file";
 						$header  = "'HTTP/{$request['version']} 404 Not Found\r\n".
 						           "Content-Length: ".strlen($output)."\r\n";
