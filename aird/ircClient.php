@@ -710,6 +710,7 @@ class ircClient extends socketClient {
 			} elseif (substr($function, 0, 4) == 'err_') {
 				$this->err_generic($from, $command, $to, $param);
 			} else {
+				$this->err_generic($from, $command, $to, $param);
 				AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented message " . $command);
 			}
 		} elseif ($command == 'NOTICE') {
@@ -785,6 +786,7 @@ class ircClient extends socketClient {
 						$this->err_generic($from, $command, $to, $param);
 					} else {
 						AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented client message " . $command);
+						$this->err_generic($from, $command, $to, $param);
 					}
 				} else {
 					AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented client message " . $command);
