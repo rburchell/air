@@ -285,12 +285,12 @@ Object.extend(Object.extend(chatEditorPopup.prototype, chatEditorButton.prototyp
 		$(this.divContent).setStyle({top : (this.element.offsetTop - dimensions.height) - 2 + 'px', left : (this.element.offsetLeft + 1) + 'px'});
 		this.element.removeClassName('over');
 		this.element.addClassName('down');
-		this.divContent.show();
+		$(this.divContent).show();
 	},
 
 	hide: function() {
 		this.element.removeClassName('down');
-		this.divContent.hide();
+		$(this.divContent).hide();
 	},
 
 	onSelect: function(event) {
