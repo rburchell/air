@@ -71,7 +71,6 @@ class httpdServerClient extends socketServerClient {
 					$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
 					// streaming iframe/comet communication (hanging get), don't send content-length!
 					$nickname               = isset($params['nickname']) ? $params['nickname'] : 'chabot';
-					$channel                = isset($params['channel'])  ? $params['channel']  : 'chatprototype';
 					$server = "127.0.0.1";
 					$this->key              = md5("{$this->remote_address}:{$nickname}:{$server}:{$channel}".rand());
 					AirD::Log(AirD::LOGTYPE_HTTP, "New connection from " . $this->remote_address . " to " . $server . " with nickname " . $nickname . " - unique key: " . $this->key);
@@ -81,7 +80,6 @@ class httpdServerClient extends socketServerClient {
 					$client->client_address = $this->remote_address;
 					$client->nick           = $nickname;
 					$client->key            = $this->key;
-					$client->channel        = "#$channel";
 					$this->irc_client       = $client;
 					$this->streaming_client = true;
 					$output    = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n".
@@ -97,16 +95,16 @@ class httpdServerClient extends socketServerClient {
 					break;
 				case '/message':
 					if (!empty($params['key']) && !empty($params['msg'])) {
-						AirD::Log(AirD::LOGTYPE_HTTP, "Got a command from client " . $params['key'] . ": " . urldecode($params['msg']),  true);
 						foreach ($daemon->clients as $socket) {
 							if (isset($socket->key) && get_class($socket) == 'ircClient' && $socket->key == $params['key']) {
-								$channel = isset($params['channel']) ? urldecode($params['channel']) : $socket->channel;
+		AirD::Log(AirD::LOGTYPE_HTTP, "Got a command from client " . $params['key'] . " in " . $params['channel'] . ": " . urldecode($params['msg']),  true);
+								$channel = urldecode($params['channel']);
 								$socket->message($channel, html_entity_decode(urldecode($params['msg'])));
 								break;
 							}
 						}
 					}
-					$output  = "OK\r\n";
+					$output  = "<script type=\"text/javascript\"></script>\r\n";
 					$header  = "HTTP/{$request['version']} 200 OK\r\n";
 					$header .= "Accept-Ranges: bytes\r\n";
 					$header .= "Cache-Control: no-cache, must-revalidate\r\n";

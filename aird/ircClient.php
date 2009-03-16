@@ -24,7 +24,6 @@ class ircClient extends socketClient {
 	private $server_info = array();
 	public  $nick;
 	public  $key;
-	public  $channel;
 	public  $names = array();
 	public  $server;
 	public  $client_address;
@@ -109,6 +108,7 @@ class ircClient extends socketClient {
 				$who = strpos($param, ' ') !== false ? trim(substr($param, 0, strpos($param, ' ')))  : $param;
 				$msg = strpos($param, ' ') !== false ? trim(substr($param, strpos($param, ' ') + 1)) : '';
 				$this->message($who, $msg);
+				AirD::Log(AirD::LOGTYPE_IRC, "Processing message from client to " . $destination . ": " . $param);
 				break;
 			case 'say':
 				$this->message($destination, $param);
@@ -247,6 +247,7 @@ class ircClient extends socketClient {
 
 	public function message($destination, $msg)
 	{
+		AirD::Log(AirD::LOGTYPE_IRC, "Got a client message to " . $destination . ": " . $msg);
 		if (substr($msg, 0, 1) == '/') {
 			$this->user_command($destination, $msg);
 		} else {
@@ -334,7 +335,7 @@ class ircClient extends socketClient {
 	public function on_msg($from, $channel, $msg)
 	{
 		$from = $this->escape($from);
-		$channel = $this->escape($from);
+		$channel = $this->escape($channel);
 		$msg  = $this->escape($msg);
 
 		$this->send_script("chat.onMessage('$from', '$channel', '$msg');");
@@ -548,9 +549,6 @@ class ircClient extends socketClient {
 	private function rpl_endofmotd($from, $command, $to, $param)
 	{
 		$this->server_info['motd'] .= $param."\n";
-		if (!empty($this->channel)) {
-			$this->join($this->channel);
-		}
 		foreach ($this->server_info as $key => $val) {
 			if ($key == 'motd') {
 				$lines = explode("\n", $this->server_info['motd']);
