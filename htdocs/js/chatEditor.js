@@ -62,13 +62,54 @@ chatEditor.prototype = {
 		this.doc = $('editor_edit').contentWindow.document;
 		this.doc.designMode = 'on';
 		this.createMenu();
-		// listen for Return key, which triggers the 'send' event
-		Event.observe(this.doc, 'keydown', function(event) {
-			if (event.keyCode == Event.KEY_RETURN && !event.shiftKey) {
-				this.send();
-				return false;
-			} else if (event.keyCode == Event.KEY_RETURN && parseFloat($(this.sizer.divSend).getStyle('height')) < 60) {
-				this.sizer.resize(80);
+
+		// Command history holder.
+		this.commandHistory = new Array();
+		this.historyPos = -1;
+
+		// Monitor keystrokes.
+		Event.observe(this.doc, 'keydown', function(event)
+		{
+			switch (event.keyCode)
+			{
+				case Event.KEY_RETURN:
+					// Send the message off to the server of oz.
+					if (!event.shiftKey)
+					{
+						this.send();
+						return false;
+					}
+
+					// No, I have no idea what this is for.
+					if (parseFloat($(this.sizer.divSend).getStyle('height')) < 60)
+					{
+						this.sizer.resize(80);
+					}
+					break;
+				case Event.KEY_TAB:
+					alert("Tab completion ain't done. Live with it. Sorry.");
+					return false;
+					break;
+				case Event.KEY_DOWN:
+					var item = this.historyGetNext();
+					if (item != null)
+					{
+						this.doc.body.innerHTML = item;
+					}
+					else
+					{
+						this.doc.body.innerHTML = "";
+					}
+					return false;
+					break;
+				case Event.KEY_UP:
+					var item = this.historyGetPrevious();
+					if (item != null)
+					{
+						this.doc.body.innerHTML = item;
+					}
+					return false;
+					break;
 			}
 		}.bind(this));
 		this.focus();
@@ -86,6 +127,9 @@ chatEditor.prototype = {
 				chat.message(msg);
 			}
 		});
+
+		// Add this item to history.
+		this.historyAddItem(this.doc.body.innerHTML);
 		setTimeout("chat.editor.clear();",10);
 	},
 
@@ -97,6 +141,74 @@ chatEditor.prototype = {
 	clear: function() {
 		this.doc.body.innerHTML = '&nbsp;';
 		this.focus();
+	},
+
+	/** Add an item to the command history.
+	 * @param item The item to add to the command history.
+	 * NOTE: Resets the user's position in the command history to the top of the stack.
+	 */
+	historyAddItem: function(item)
+	{
+		// Don't allow duplicate items -- just re-blank it
+		if (this.commandHistory[0] == item)
+		{
+			chat.debug("Not adding duplicate history item " + item);
+		}
+		else
+		{
+			// Don't allow indefinite growth
+			if (this.commandHistory.length > 100)
+			{
+				this.commandHistory.pop();
+			}
+
+			chat.debug("Added item to command history, now " + this.commandHistory.length + " items. Item added is: " + item);
+
+			// Add the item.
+			this.commandHistory.unshift(item);
+		}
+
+		// Restore pointer to the top of the history stack.
+		this.historyPos = -1;
+	},
+
+	/** Returns the previous (chronological) item in the command history, if one may be fetched.
+	 * @return Returns null if no item may be retrieved (i.e. none stored or already at the end), or the command string.
+	 * NOTE: Modifies the command history pointer.
+	 */
+	historyGetPrevious: function()
+	{
+		// Don't allow moving past the end of the stack.
+		if (this.historyPos > this.commandHistory.length - 1)
+			return null;
+
+		chat.debug("GetPrevious: Returning history item " + this.historyPos + " which is: " + this.commandHistory[this.historyPos]);
+
+		this.historyPos++;
+		if (this.historyPos > this.commandHistory.length - 1)
+			this.historyPos = this.commandHistory.length - 1;
+
+		// Return this string, change position for the future.
+		return this.commandHistory[this.historyPos];
+	},
+
+	/** Returns the next (chronological) item in the command history, if one may be fetched.
+	 * @return Returns null if no item may be retrieved (i.e. none stored or already at the start), or the command string.
+	 * NOTE: Modifies the command history pointer.
+	 */
+	historyGetNext: function()
+	{
+		if (this.historyPos == 0)
+			return null;
+
+		chat.debug("GetNext: Returning history item " + this.historyPos + " which is: " + this.commandHistory[this.historyPos]);
+
+		this.historyPos--;
+		if (this.historyPos < 0)
+			this.historyPos = 0;
+
+		// Return this string, change position for the future.
+		return this.commandHistory[this.historyPos];
 	},
 
 	closeMenus: function() {

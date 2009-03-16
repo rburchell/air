@@ -7,6 +7,10 @@ abstract class socketClient extends socket {
 	public $read_buffer    = '';
 	public $write_buffer   = '';
 
+	/** If the socket is blocked for writing, this will be true.
+	  */
+	public $bBlocked = false;
+
 	public function connect($remote_address, $remote_port)
 	{
 		$this->connecting = true;
@@ -23,13 +27,20 @@ abstract class socketClient extends socket {
 		$this->do_write();
 	}
 
-	public function do_write()
+	public function do_write($bForceWrite = false)
 	{
+		// If we haven't explicitly been told to try to write, don't.
+		if (!$bForceWrite && $this->bBlocked)
+			true;
+
+		// Forced to write by the SE: unset blocked flag
+		$this->bBlocked = false;
 		$length = strlen($this->write_buffer);
 		try {
 			$written = parent::write($this->write_buffer, $length);
 			if ($written < $length) {
 				$this->write_buffer = substr($this->write_buffer, $written);
+				$this->bBlocked = true;
 			} else {
 				$this->write_buffer = '';
 			}

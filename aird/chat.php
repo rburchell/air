@@ -25,6 +25,7 @@ ini_set('mbstring.func_overload', '0');
 ini_set('output_handler', '');
 ini_set('default_socket_timeout','10');
 ini_set('memory_limit','512M');
+date_default_timezone_set("UTC");
 set_time_limit(0);
 
 function __autoload($sClass)
@@ -47,7 +48,7 @@ abstract class AirD
 
 	public static function Log($sType, $sMessage, $bDebug = false)
 	{
-		echo $sType . ": " . $sMessage . "\n";
+		echo strftime('%T') . " " . $sType . ": " . $sMessage . "\n";
 	}
 }
 

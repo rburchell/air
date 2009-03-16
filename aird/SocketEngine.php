@@ -119,7 +119,7 @@ class SocketEngine
 							$socket->on_connect();
 							$socket->connecting = false;
 						}
-						$socket->do_write();
+						$socket->do_write(true);
 					}
 				}
 				foreach ($exception_set as $socket) {
