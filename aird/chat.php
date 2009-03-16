@@ -51,7 +51,7 @@ abstract class AirD
 	}
 }
 
-
+error_reporting(E_ALL | E_NOTICE | E_STRICT);
 AirD::Log(AirD::LOGTYPE_INTERNAL, "AirD " . AirD::VERSION_STRING . " starting up...");
 
 // Stuff relies on this name. Unfortunately.
