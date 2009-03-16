@@ -851,7 +851,10 @@ class ircClient extends socketClient {
 	public function on_connect()
 	{
 		$this->send_script("chat.onSetGUIVersion('" . AirD::VERSION_STRING . "');chat.onConnecting();");
-		$this->write("USER foobar 0 chabotc.nl :IP {$this->client_address}\r\n");
+		list($iOctet1, $iOctet2, $iOctet3, $iOctet4) = explode(".", $this->client_address, 4);
+		$iDecimal = ((((($iOctet1 * 256 + $iOctet2) * 256) + $iOctet3) * 256) + $iOctet4);
+		$sHex = dechex($iDecimal);
+		$this->write("USER " . $sHex . " * * :air web irc client\r\n");
 		$this->write("NICK {$this->nick}\r\n");
 	}
 
