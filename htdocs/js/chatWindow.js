@@ -108,14 +108,12 @@ chatWindow.prototype = {
 	},
 
 	shake: function() {
-		Effect.shake(this.element);
 	},
 
 	hide: function(event) {
 		if (event != undefined && event && event.stopPropagation != undefined) {
 			event.stopPropagation();
 		}
-		//new Effect.Fade(this.element, {duration: 0.4});
 		this.element.hide();
 	},
 
@@ -123,7 +121,6 @@ chatWindow.prototype = {
 		if (this.options.showCenter) {
 			this.center();
 		}
-		//new Effect.Appear(this.element, {duration: 0.4});
 		this.element.show();
 	},
 

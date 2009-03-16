@@ -48,7 +48,7 @@ chatContextMenu.prototype = {
         this.index = 0;
         chatContextMenu._currentMenu = this;
         this.menu.setStyle({ left : Event.pointerX(event) + 'px', top : Event.pointerY(event) + 'px'});
-        Effect.Appear(this.menu, {duration : this.options.duration});
+	  Element.show(this.menu);
         Event.observe(document, "click", this.onclicklistener);
         Event.stop(event);
     },

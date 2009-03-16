@@ -5,7 +5,6 @@
 var chatButton = Class.create();
 chatButton.prototype = {
 	initialize: function(id) {
-		this.hasEffectLib = String.prototype.parseColor != null;
 		this.options = Object.extend({
 			title       : 'button',
 			onclick		: Prototype.emptyFunction,
@@ -36,16 +35,13 @@ chatButton.prototype = {
 	},
 
 	shake: function() {
-		Effect.shake(this.element);
 	},
 
 	fade: function() {
-		Effect.Fade(this.element);
 		this.visible = false;
 	},
 
 	appear: function {
-		Effect.Appear(this.element);
 		this.visible = true;
 	},
 
@@ -60,13 +56,11 @@ chatButton.prototype = {
 	},
 
 	show: function() {
-		this.options.visible = false;
-		Effect.show(this.element);
+		this.options.visible = true;
 	},
 
 	hide: function() {
-		this.options.visible = true;
-		Effect.hide(this.element);
+		this.options.visible = false;
 	},
 
 	setTitle: function(title) {
