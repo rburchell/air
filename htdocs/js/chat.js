@@ -7,8 +7,8 @@ var chat = {
 	server       : '',
 	key          : false,
 	connection   : false,
+	iframeDiv    : false, // required for IE.
 	connected    : false,
-	iframeDiv    : false,
 	timer        : false,
 	editor       : false,
 	channels     : [],
@@ -329,36 +329,28 @@ var chat = {
 	},
 
 	initializeIframe: function() {
-		if (navigator.appVersion.indexOf("MSIE") != -1) {
-			// use the "htmlfile hack" in ie to prevent the background click sounds
-			chat.connection = new ActiveXObject("htmlfile");
-			chat.connection.open();
-			chat.connection.write("<html>");
-			chat.connection.write("<script>document.domain = '"+document.domain+"'");
-			chat.connection.write("</html>");
-			chat.connection.close();
-			chat.iframeDiv = chat.connection.createElement("div");
-			chat.connection.appendChild(chat.iframeDiv);
-			chat.connection.parentWindow.chat = chat;
-			chat.iframeDiv.innerHTML = "<iframe name='comet_iframe' id='comet_iframe' src='/get?nickname="+chat.nickname+"&server="+chat.server+"' onload='chat.frameDisconnected(); onerror='chat.frameDisconnected();'></iframe>";
-		} else {
+//		if (navigator.appVersion.indexOf("MSIE") != -1) {
+//			// For IE browsers
+//			chat.connection = new ActiveXObject("htmlfile");
+//			chat.connection.open();
+//			chat.connection.write("<html>");
+//			chat.connection.write("<script>document.domain = '"+document.domain+"'");
+//			chat.connection.write("</html>");
+//			chat.connection.close();
+//			chat.iframeDiv = chat.connection.createElement("div");
+//			chat.connection.appendChild(chat.iframeDiv);
+//			chat.connection.parentWindow.chat = chat;
+//			chat.iframeDiv.innerHTML = "<iframe name='comet_iframe' id='comet_iframe' src='/get?nickname="+chat.nickname+"&server="+chat.server+"' onload='chat.frameDisconnected(); onerror='chat.frameDisconnected();'></iframe>";
+//		} else {
+			// For other browser (Firefox...)
 			chat.connection = document.createElement('iframe');
-			chat.connection.setAttribute('id',     'comet_iframe');
-			chat.connection.setAttribute('name',   'comet_iframe_name');
-			with (chat.connection.style) {
-				left       = top   = "-100px";
-				height     = width = "1px";
-				visibility = "hidden";
-				display    = 'none';
-			}
-			chat.iframeDiv = document.createElement('iframe');
-			chat.iframeDiv.setAttribute('onLoad', 'chat.frameDisconnected()');
-			chat.iframeDiv.setAttribute('onError', 'chat.frameDisconnected()');
-			chat.iframeDiv.setAttribute('src',    '/get?nickname='+chat.nickname+'&server='+chat.server);
-			chat.connection.appendChild(chat.iframeDiv);
-			document.body.appendChild(chat.connection);
+			chat.connection.setAttribute('id', 'comet_iframe');
+			chat.connection.src = '/get?nickname=' + chat.nickname + '&server=' + chat.server;
 
-		}
+			chat.connection.onLoad = 'chat.frameDisconnected()';
+			chat.connection.onError = 'chat.frameDisconnected()';
+			document.body.appendChild(chat.connection);
+//		}
 
 	},
 
