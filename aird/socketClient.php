@@ -14,11 +14,7 @@ abstract class socketClient extends socket {
 	public function connect($remote_address, $remote_port)
 	{
 		$this->connecting = true;
-		try {
-			parent::connect($remote_address, $remote_port);
-		} catch (socketException $e) {
-			echo "Caught exception: ".$e->getMessage()."\n";
-		}
+		parent::connect($remote_address, $remote_port);
 	}
 
 	public function write($buffer, $length = 4096)
