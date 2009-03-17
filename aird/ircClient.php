@@ -242,7 +242,9 @@ class ircClient extends socketClient {
 
 	public function action($destination, $msg)
 	{
-		$this->write("PRIVMSG $destination :".chr(1).$msg.chr(1)."\r\n");
+		$sCTCP = chr(1). "ACTION " . $msg.chr(1);
+		$this->write("PRIVMSG $destination :". $sCTCP . "\r\n");
+		$this->on_ctcp($this->nick, $destination, $sCTCP);
 	}
 
 	public function message($destination, $msg)
