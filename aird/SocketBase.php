@@ -97,8 +97,7 @@ abstract class SocketBase {
 		}
 		elseif (!@socket_connect($this->socket, $remote_address, $remote_port))
 		{
-			$iCode = socket_last_error();
-			if ($iCode != 114 && $iCode != 115) // EINPROGRESS, we most certainly do not want an exception for *that*
+			if (socket_strerror(socket_last_error()) != "Operation now in progress") // Must check string error, checking error code is not portable unfortunately.
 				throw new socketException("Could not connect to {$remote_address} - {$remote_port}: ".$this->get_error());
 		}
 	}

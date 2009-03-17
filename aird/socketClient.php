@@ -50,7 +50,7 @@ abstract class socketClient extends SocketBase {
 			$this->on_write();
 			return true;
 		} catch (socketException $e) {
-			if (socket_last_error() == 11) // Resource temporarily unavailable.
+			if (socket_strerror(socket_last_error()) == "Resource temporarily unavailable") // Must check string, integer codes are nonportable.
 				return false;
 
 			AirD::Log(AirD::LOGTYPE_INTERNAL, "Exception caught while writing to socket " . (int)$this->socket . ": " . $e->getMessage());
