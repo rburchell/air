@@ -31,7 +31,7 @@ set_time_limit(0);
 function __autoload($sClass)
 {
 	AirD::Log(AirD::LOGTYPE_INTERNAL, "Loading " . $sClass);
-	require_once("./" . $sClass . ".php");
+	include("./" . $sClass . ".php");
 
 	if (!class_exists($sClass))
 		AirD::Log(AirD::LOGTYPE_INTERNAL, "Loaded " . $sClass . " as a file, but class still doesn't exist. Aiee.");
@@ -39,6 +39,8 @@ function __autoload($sClass)
 
 abstract class AirD
 {
+	public static $aIRCClients = array();
+
 	const VERSION_STRING = "1.0";
 
 	const LOGTYPE_INTERNAL = "INTERNAL";
@@ -55,7 +57,5 @@ abstract class AirD
 error_reporting(E_ALL | E_NOTICE | E_STRICT);
 AirD::Log(AirD::LOGTYPE_INTERNAL, "AirD " . AirD::VERSION_STRING . " starting up...");
 
-// Stuff relies on this name. Unfortunately.
-$daemon = new SocketEngine();
-$daemon->create_server('HTTPServer', 'httpdServerClient', 0, 2001);
-$daemon->process();
+new HTTPServer(2001);
+SocketEngine::process();

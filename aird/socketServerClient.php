@@ -8,6 +8,7 @@ abstract class socketServerClient extends socketClient {
 
 	public function __construct($socket)
 	{
+		AirD::Log(AirD::LOGTYPE_INTERNAL, "socketServerClient's constructor", true);
 		$this->socket         = $socket;
 		if (!is_resource($this->socket)) {
 			throw new socketException("Invalid socket or resource");
@@ -16,7 +17,9 @@ abstract class socketServerClient extends socketClient {
 		} elseif (!socket_getpeername($this->socket, $this->remote_address, $this->remote_port)) {
 			throw new socketException("Could not retrieve remote address & port: ".socket_strerror(socket_last_error($this->socket)));
 		}
-		$this->set_non_block();
 		$this->on_connect();
+
+		$this->set_non_block(true);
+		SocketEngine::AddFd($this);
 	}
 }

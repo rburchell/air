@@ -31,7 +31,6 @@ class ircChannel {
 
 	public function __construct($parent, $channel)
 	{
-		echo "[IRC] joined: $channel\n";
 		$this->parent  = $parent;
 		$this->channel = htmlspecialchars($channel, ENT_QUOTES, 'UTF-8');
 		$parent->send_script("chat.onJoined('$channel');");
@@ -39,13 +38,11 @@ class ircChannel {
 
 	public function __destruct()
 	{
-		echo "[IRC] left {$this->channel}\n";
 		$this->parent->send_script("chat.onParted('$this->channel');");
 	}
 
 	public function on_topic($topic)
 	{
-		echo "[IRC] {$this->channel} topic:$topic\n";
 		$this->topic = $topic;
 		$topic       = htmlspecialchars($topic, ENT_QUOTES, 'UTF-8');
 		$this->parent->send_script("chat.onTopic('{$this->channel}', '$topic');");
@@ -53,7 +50,6 @@ class ircChannel {
 
 	public function on_join($who)
 	{
-		echo "[IRC] $who entered {$this->channel}\n";
 		if (!isset($this->names[$who])) {
 			$this->names[$who] = array('nickname' => $who);
 			$who               = htmlspecialchars($who, ENT_QUOTES, 'UTF-8');
@@ -63,7 +59,6 @@ class ircChannel {
 
 	public function on_part($who, $message)
 	{
-		echo "[IRC] $who left {$this->channel}: $message\n";
 		if (isset($this->names[$who])) {
 			unset($this->names[$who]);
 			$who     = htmlspecialchars($who, ENT_QUOTES, 'UTF-8');
@@ -74,7 +69,6 @@ class ircChannel {
 
 	public function on_kick($from, $who, $reason)
 	{
-		echo "[IRC] $who was kicked from {$this->channel}\n";
 		unset($this->names[$who]);
 		$who    = htmlspecialchars($who,    ENT_QUOTES, 'UTF-8');
 		$from   = htmlspecialchars($from,   ENT_QUOTES, 'UTF-8');
@@ -88,7 +82,6 @@ class ircChannel {
 
 	public function on_mode($mode)
 	{
-		echo "[IRC] {$this->channel} channel mode set to $mode\n";
 		$this->mode = $mode;
 		$mode = htmlspecialchars($mode, ENT_QUOTES, 'UTF-8');
 		$this->parent->send_script("chat.onChannelMode('{$this->channel}','$mode');");
@@ -157,7 +150,6 @@ class ircChannel {
 
 	public function topic_set_by($who, $when)
 	{
-		echo "[IRC] {$this->channel} topic set by $who at ".date("d/m/Y H:i", $when)."\n";
 		$this->topic_created = $when;
 		$this->topic_set_by  = $who;
 	}

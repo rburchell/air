@@ -17,7 +17,21 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-class HTTPServer extends socketServer {}
+class HTTPServer extends socketServer
+{
+	public function __construct($iPort)
+	{
+		AirD::Log(AirD::LOGTYPE_INTERNAL, "HTTPServer's constructor", true);
+		parent::__construct("httpdServerClient", 0, $iPort);
+	}
+
+	public function read()
+	{
+		AirD::Log(AirD::LOGTYPE_INTERNAL, "HTTPServer's read", true);
+		parent::read();
+		AirD::Log(AirD::LOGTYPE_INTERNAL, "After HTTPServer's read", true);
+	}
+}
 
 class httpdServerClient extends socketServerClient {
 	private $accepted;
@@ -29,9 +43,21 @@ class httpdServerClient extends socketServerClient {
 	public  $streaming_client = false;
 	private $irc_client       = false;
 
+	public function __destruct()
+	{
+		AirD::Log(AirD::LOGTYPE_HTTP, "Destroyed HTTP connection " . $this->key . " from destructor");
+		$this->Destroy();
+	}
+
+	public function Destroy()
+	{
+		AirD::Log(AirD::LOGTYPE_HTTP, "Destroyed HTTP connection " . $this->key);
+		$this->close();
+		unset($this->irc_client);
+	}
+
 	private function handle_request($request)
 	{
-		global $daemon;
 		$output = '';
 		if (!$request['version'] || ($request['version'] != '1.0' && $request['version'] != '1.1')) {
 			// sanity check on HTTP version
@@ -75,14 +101,13 @@ class httpdServerClient extends socketServerClient {
 					// streaming iframe/comet communication (hanging get), don't send content-length!
 					$nickname               = isset($params['nickname']) ? $params['nickname'] : 'chabot';
 					$server = "208.68.93.158";
-					$this->key              = md5("{$this->remote_address}:{$nickname}:{$server}:{$channel}".rand());
+					$this->key              = md5("{$this->remote_address}:{$nickname}:{$server}".mt_rand());
 					AirD::Log(AirD::LOGTYPE_HTTP, "New connection from " . $this->remote_address . " to " . $server . " with nickname " . $nickname . " - unique key: " . $this->key);
 					// created paired irc client
-					$client                 = $daemon->create_client('ircClient', $server, 6667);
+					$client = new ircClient($this, $this->key, $server, 6667);
 					$client->server         = $server;
 					$client->client_address = $this->remote_address;
 					$client->nick           = $nickname;
-					$client->key            = $this->key;
 					$this->irc_client       = $client;
 					$this->streaming_client = true;
 					$output    = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n".
@@ -97,15 +122,11 @@ class httpdServerClient extends socketServerClient {
 					}
 					break;
 				case '/message':
-					if (!empty($params['key']) && !empty($params['msg'])) {
-						foreach ($daemon->clients as $socket) {
-							if (isset($socket->key) && get_class($socket) == 'ircClient' && $socket->key == $params['key']) {
-		AirD::Log(AirD::LOGTYPE_HTTP, "Got a command from client " . $params['key'] . " in " . $params['channel'] . ": " . urldecode($params['msg']),  true);
-								$channel = urldecode($params['channel']);
-								$socket->message($channel, html_entity_decode(urldecode($params['msg'])));
-								break;
-							}
-						}
+					if (!empty($params['key']) && !empty($params['msg']))
+					{
+						$sChannel = urldecode($params['channel']);
+						AirD::Log(AirD::LOGTYPE_HTTP, "Got a command from client " . $params['key'] . " in " . $params['channel'] . ": " . urldecode($params['msg']),  true);
+						AirD::$aIRCClients[$params['key']]->message($sChannel, html_entity_decode(urldecode($params['msg'])));
 					}
 					$output  = "<script type=\"text/javascript\"></script>\r\n";
 					$header  = "HTTP/{$request['version']} 200 OK\r\n";

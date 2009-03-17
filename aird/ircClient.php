@@ -1,4 +1,4 @@
-<?
+<?php
 /*
 WebChat2.0 Copyright (C) 2006-2007, Chris Chabot <chabotc@xs4all.nl>
 
@@ -19,7 +19,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 require('ircChannel.php');
 
-class ircClient extends socketClient {
+class ircClient extends socketClient
+{
+	/** The HTTP client this IRC client is attached to.
+	  */
+	private $oHTTPClient;
+
 	private $channels;
 	private $server_info = array();
 	public  $nick;
@@ -27,8 +32,6 @@ class ircClient extends socketClient {
 	public  $names = array();
 	public  $server;
 	public  $client_address;
-	public  $http_client;
-	public  $output = '';
 
 	/*** handle user commands ***/
 
@@ -40,6 +43,29 @@ class ircClient extends socketClient {
 	/ping (finish with ping times!)
 	/help -> give overview of commands!
 	*/
+
+	public function __construct($oHTTPClient, $sKey, $sServer, $iPort)
+	{
+		$this->oHTTPClient = $oHTTPClient;
+		$this->key = $sKey;
+		AirD::Log(AirD::LOGTYPE_INTERNAL, "Created a new IRC client: " . $sKey, true);
+		parent::__construct($sServer, $iPort);
+		AirD::$aIRCClients[$sKey] = $this;
+	}
+
+	public function __destruct()
+	{
+		AirD::Log(AirD::LOGTYPE_INTERNAL, "Destroyed IRC client " . $this->key . " via destructor");
+		$this->Destroy();
+	}
+
+	public function Destroy()
+	{
+		AirD::Log(AirD::LOGTYPE_INTERNAL, "Destroyed IRC client " . $this->key);
+		$this->close();
+		unset($this->oHTTPClient);
+		unset(AirD::$aIRCClients[$this->key]);
+	}
 
 	private function escape($s)
 	{
@@ -119,6 +145,12 @@ class ircClient extends socketClient {
 			default:
 				$this->write($cmd . " " . $param . "\r\n");
 		}
+	}
+
+	public function write($s, $l = 5000)
+	{
+		AirD::Log(AirD::LOGTYPE_INTERNAL, "Wrote " . $s . " to " . (int)$this->socket);
+		parent::write($s, $l);
 	}
 
 	/*** IRC methods ***/
@@ -228,16 +260,9 @@ class ircClient extends socketClient {
 
 	public function quit($reason = false)
 	{
-		global $daemon;
 		$reason = empty($reason) ? '' : " :$reason";
 		$this->write("QUIT$reason\r\n");
-		$this->close();
-		foreach ($daemon->clients as $http_client) {
-			if (get_class($http_client) == 'httpdServerClient' && $http_client->streaming_client && $this->key == $http_client->key) {
-				$http_client->close();
-				break;
-			}
-		}
+		$this->Destroy();
 	}
 
 	public function action($destination, $msg)
@@ -256,7 +281,6 @@ class ircClient extends socketClient {
 			$this->write("PRIVMSG $destination :$msg\r\n");
 			if (substr($destination, 0, 1) == '#') {
 				$this->on_msg($this->nick, $destination, $msg);
-				$this->handle_write();
 			} else {
 				// this was a priv msg..
 			}
@@ -798,7 +822,6 @@ class ircClient extends socketClient {
 
 	private function on_readln($string)
 	{
-		global $daemon;
 		if (substr($string, 0, 1) == ':') {
 			$string = substr($string, 1);
 			$match  = explode(' ', $string);
@@ -828,36 +851,13 @@ class ircClient extends socketClient {
 		} else {
 			AirD::Log(AirD::LOGTYPE_IRC, "Weird unknown string: " . $string);
 		}
-		$this->handle_write();
-	}
-
-	private function handle_write()
-	{
-		global $daemon;
-		foreach ($daemon->clients as $http_client) {
-			if (get_class($http_client) == 'httpdServerClient' && $http_client->streaming_client && $this->key == $http_client->key) {
-				$http_client->write_buffer .= $this->output;
-				if ($http_client->do_write()) {
-					$this->output = '';
-				}
-			}
-		}
 	}
 
 	public function send_script($msg)
 	{
-		global $daemon;
 		AirD::Log(AirD::LOGTYPE_JAVASCRIPT, "Sending to " . $this->key . ": " . $msg);
 		// CLIENT COUNT SHOULD NOT BE HERE.
-		$iClients = 0;
-		foreach ($daemon->clients as $http_client) {
-			if (get_class($http_client) == 'httpdServerClient') {
-				$iClients++;
-			}
-		}
-
-		$this->output .= "<script type=\"text/javascript\">\n$msg\nchat.onSetNumberOfUsers(" . $iClients . ")\n</script>\n";
-		$this->handle_write();
+		$this->oHTTPClient->write("<script type=\"text/javascript\">\n$msg\nchat.onSetNumberOfUsers(" . count(AirD::$aIRCClients) . ")\n</script>\n");
 	}
 
 	public function on_connect()

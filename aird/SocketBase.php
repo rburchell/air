@@ -6,7 +6,7 @@ if (!defined('SOL_TCP')) {
 
 class socketException extends Exception {}
 
-abstract class socket {
+abstract class SocketBase {
 	public $socket;
 	public $bind_address;
 	public $bind_port;
@@ -17,6 +17,8 @@ abstract class socket {
 	public $local_port;
 	public $read_buffer    = '';
 	public $write_buffer   = '';
+	public $connecting     = false;
+	public $disconnected   = false;
 
 	public function __construct($bind_address = 0, $bind_port = 0, $domain = AF_INET, $type = SOCK_STREAM, $protocol = SOL_TCP)
 	{
@@ -28,6 +30,7 @@ abstract class socket {
 		if (($this->socket = @socket_create($domain, $type, $protocol)) === false) {
 			throw new socketException("Could not create socket: ".socket_strerror(socket_last_error($this->socket)));
 		}
+		AirD::Log(AirD::LOGTYPE_INTERNAL, "SocketBase's constructor (FD " . (int)$this->socket . ")", true);
 		if (!@socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1)) {
 			throw new socketException("Could not set SO_REUSEADDR: ".$this->get_error());
 		}
@@ -38,10 +41,12 @@ abstract class socket {
 			throw new socketException("Could not retrieve local address & port: ".socket_strerror(socket_last_error($this->socket)));
 		}
 		$this->set_non_block(true);
+		SocketEngine::AddFd($this);
 	}
 
 	public function __destruct()
 	{
+		AirD::Log(AirD::LOGTYPE_INTERNAL, "SocketBase's destructor (FD " . (int)$this->socket . ")", true);
 		if (is_resource($this->socket)) {
 			$this->close();
 		}
@@ -73,11 +78,11 @@ abstract class socket {
 		return $ret;
 	}
 
-	public function read($length = 4096)
+	public function read()
 	{
 		if (!is_resource($this->socket)) {
 			throw new socketException("Invalid socket or resource");
-		} elseif (($ret = @socket_read($this->socket, $length, PHP_BINARY_READ)) == false) {
+		} elseif (($ret = @socket_read($this->socket, 2048, PHP_BINARY_READ)) == false) {
 			throw new socketException("Could not read from socket: ".$this->get_error());
 		}
 		return $ret;
@@ -89,8 +94,12 @@ abstract class socket {
 		$this->remote_port    = $remote_port;
 		if (!is_resource($this->socket)) {
 			throw new socketException("Invalid socket or resource");
-		} elseif (!@socket_connect($this->socket, $remote_address, $remote_port)) {
-			throw new socketException("Could not connect to {$remote_address} - {$remote_port}: ".$this->get_error());
+		}
+		elseif (!@socket_connect($this->socket, $remote_address, $remote_port))
+		{
+			$iCode = socket_last_error();
+			if ($iCode != 114 && $iCode != 115) // EINPROGRESS, we most certainly do not want an exception for *that*
+				throw new socketException("Could not connect to {$remote_address} - {$remote_port}: ".$this->get_error());
 		}
 	}
 
@@ -149,4 +158,9 @@ abstract class socket {
 			throw new socketException("Could not set SO_REUSEADDR to '$reuse': ".$this->get_error());
 		}
 	}
+
+
+	/** Events.
+	  */
+	public function on_timer() {}
 }
