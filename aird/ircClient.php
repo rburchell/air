@@ -26,7 +26,6 @@ class ircClient extends socketClient
 	private $oHTTPClient;
 
 	private $channels;
-	private $server_info = array();
 	public  $nick;
 	public  $key;
 	public  $names = array();
@@ -504,90 +503,79 @@ class ircClient extends socketClient
 		$this->server = $from;
 		$this->on_nick($this->nick, $to);
 		$this->nick = $to;
-		$this->server_info['motd'] = '';
 	}
 
 	private function rpl_yourhost($from, $command, $to, $param)
 	{
-		$this->server_info['your_host'] = $param;
+		$this->send_script("chat.onServerInfo('your_host','" . $this->escape($param) . "');");
 	}
 
 	private function rpl_created($from, $command, $to, $param)
 	{
-		$this->server_info['created'] = $param;
+		$this->send_script("chat.onServerInfo('created','" . $this->escape($param) . "');");
 	}
 
 	private function rpl_myinfo($from, $command, $to, $param)
 	{
-		$this->server_info['my_info'] = $param;
+		$this->send_script("chat.onServerInfo('my_info','" . $this->escape($param) . "');");
 	}
 
 	private function rpl_bounce($from, $command, $to, $param)
 	{
-		$this->server_info['bounce'] = $param;
+		$this->send_script("chat.onServerInfo('bounce','" . $this->escape($param) . "');");
 	}
 
 	private function rpl_uniqid($from, $command, $to, $param)
 	{
-		$this->server_info['uniq_id'] = $param;
+		$this->send_script("chat.onServerInfo('uniq_id','" . $this->escape($param) . "');");
 	}
 
 	private function rpl_luserclient($from, $command, $to, $param)
 	{
-		$this->server_info['local_user_client'] = $param;
+		$this->send_script("chat.onServerInfo('local_user_client','" . $this->escape($param) . "');");
 	}
 
 	private function rpl_luserme($from, $command, $to, $param)
 	{
-		$this->server_info['local_user_me'] = $param;
+		$this->send_script("chat.onServerInfo('local_user_me','" . $this->escape($param) . "');");
 	}
 
 	private function rpl_localusercount($from, $command, $to, $param)
 	{
-		$this->server_info['local_user_count'] = $param;
+		$this->send_script("chat.onServerInfo('local_user_count','" . $this->escape($param) . "');");
 	}
 
 	private function rpl_globalusercount($from, $command, $to, $param)
 	{
-		$this->server_info['global_user_count'] = $param;
+		$this->send_script("chat.onServerInfo('global_user_count','" . $this->escape($param) . "');");
 	}
 
 	private function rpl_globalconnections($from, $command, $to, $param)
 	{
-		$this->server_info['global_connections'] = $param;
+		$this->send_script("chat.onServerInfo('global_connections','" . $this->escape($param) . "');");
 	}
 
 	private function rpl_luserchannels($from, $command, $to, $param)
 	{
-		$this->server_info['channels_formed'] = $param;
+		$this->send_script("chat.onServerInfo('channels_formed','" . $this->escape($param) . "');");
 	}
 
 	private function rpl_motdstart($from, $command, $to, $param)
 	{
-		$this->server_info['motd'] .= $param."\n";
+		$line = $this->escape($param);
+		$this->send_script("chat.onMotd('$line');");
 	}
 
 	private function rpl_motd($from, $command, $to, $param)
 	{
-		$this->server_info['motd'] .= $param."\n";
+		$line = $this->escape($param);
+		$this->send_script("chat.onMotd('$line');");
 	}
 
 	private function rpl_endofmotd($from, $command, $to, $param)
 	{
-		$this->server_info['motd'] .= $param."\n";
-		foreach ($this->server_info as $key => $val) {
-			if ($key == 'motd') {
-				$lines = explode("\n", $this->server_info['motd']);
-				foreach ($lines as $line) {
-					$line = $this->escape($line);
-					$this->send_script("chat.onMotd('$line');");
-				}
-			} else {
-				$key = $this->escape($key);
-				$val = $this->escape($val);
-				$this->send_script("chat.onServerInfo('$key','$val');");
-			}
-		}
+		$line = $this->escape($param);
+		$this->send_script("chat.onMotd('$line');");
 	}
 
 	private function rpl_namreply($from, $command, $to, $param)
