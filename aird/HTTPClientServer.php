@@ -41,6 +41,7 @@ class HTTPClientServer extends socketServerClient
 		AirD::Log(AirD::LOGTYPE_HTTP, "Destroyed HTTP connection " . $this->key);
 		$this->close();
 		unset($this->irc_client);
+		$this->irc_client = false; // this avoids a warning in case of double-delete. not nice, but agressive deletion is better than lingering objects, and this is better than spurious warnings.
 	}
 
 	private function handle_request($request)
