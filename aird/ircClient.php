@@ -304,17 +304,17 @@ class ircClient extends socketClient
 			case 'ping':
 				$this->write("NOTICE $from :".chr(1)."PING $param".chr(1)."\r\n");
 				$from = $this->escape($from);
-				$this->send_script("chat.onPing('$from');");
+				$this->send_script("chat.onCTCP('$from', 'PING');");
 				break;
 			case 'time':
 				$this->write("NOTICE $from :".chr(1).gmdate("D, d M Y H:i:s", time() + 900)." GMT".chr(1)."\r\n");
 				$from = $this->escape($from);
-				$this->send_script("chat.onTime('$from');");
+				$this->send_script("chat.onCTCP('$from', 'TIME');");
 				break;
 			case 'version':
 				$this->write("NOTICE $from :".chr(1)."Chat 0.1 prototype by Chris Chabot <chabotc@xs4all.nl>".chr(1)."\r\n");
 				$from = $this->escape($from);
-				$this->send_script("chat.onVersion('$from');");
+				$this->send_script("chat.onCTCP('$from', 'VERSION');");
 				break;
 		}
 	}

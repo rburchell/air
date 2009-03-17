@@ -115,24 +115,12 @@ var chat = {
 		chat.add('info', '<span class="notice">'+motd+'</span>');
 	},
 
-	onVersion: function(from) {
-		chat.add('info', '<span class="notice">Recieved ctpcp version request from '+from+'</span>');
-		if (chat.current != 'info') {
-			chat.add(chat.current, '<span class="notice">Recieved ctpcp version request from '+from+'</span>');
-		}
-	},
-
-	onTime: function(from) {
-		chat.add('info', '<span class="notice">Recieved ctpcp time request from '+from+'</span>');
-		if (chat.current != 'info') {
-			chat.add(chat.current, '<span class="notice">Recieved ctpcp time request from '+from+'</span>');
-		}
-	},
-
-	onPing: function(from) {
-		chat.add('info', '<span class="notice">Recieved ctpcp ping request from '+from+'</span>');
-		if (chat.current != 'info') {
-			chat.add(chat.current, '<span class="notice">Recieved ctpcp ping request from '+from+'</span>');
+	onCTCP: function(from, ctcp)
+	{
+		chat.add('info', '<span class="notice">Recieved CTCP ' + ctcp + ' request from '+from+'</span>');
+		if (chat.current != 'info')
+		{
+			chat.add(chat.current, '<span class="notice">Recieved CTCP ' + ctcp + ' request from '+from+'</span>');
 		}
 	},
 
