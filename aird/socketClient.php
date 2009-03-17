@@ -43,6 +43,7 @@ abstract class socketClient extends socket {
 			$this->on_write();
 			return true;
 		} catch (socketException $e) {
+			AirD::Log(AirD::LOGTYPE_SOCKET, "Exception caught while writing to a socket: " . $e->getMessage());
 			$old_socket         = (int)$this->socket;
 			$this->close();
 			$this->socket       = $old_socket;
@@ -59,6 +60,7 @@ abstract class socketClient extends socket {
 			$this->read_buffer .= parent::read($length);
 			$this->on_read();
 		} catch (socketException $e) {
+			AirD::Log(AirD::LOGTYPE_SOCKET, "Exception caught while reading from a socket: " . $e->getMessage());
 			$old_socket         = (int)$this->socket;
 			$this->close();
 			$this->socket       = $old_socket;
