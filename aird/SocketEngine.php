@@ -1,31 +1,28 @@
-<?
+<?php
+/*
+ * Air -- FOSS AJAX IRC Client.
+ *
+ * Copyright (C) 2009, Robin Burchell <w00t@freenode.net>
+ * Copyright (C) 2006-2007, Chris Chabot <chabotc@xs4all.nl>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ */
+
 class SocketEngine
 {
-	public static $clients = array();
-
-/*
-	public function create_server($server_class, $client_class, $bind_address = 0, $bind_port = 0)
-	{
-		$server = new $server_class($client_class, $bind_address, $bind_port);
-		if (!is_subclass_of($server, 'socketServer')) {
-			throw new socketException("Invalid server class specified! Has to be a subclass of socketServer");
-		}
-		SocketEngine::servers[(int)$server->socket] = $server;
-		return $server;
-	}
-
-	public function create_client($client_class, $remote_address, $remote_port, $bind_address = 0, $bind_port = 0)
-	{
-		$client = new $client_class($bind_address, $bind_port);
-		if (!is_subclass_of($client, 'socketClient')) {
-			throw new socketException("Invalid client class specified! Has to be a subclass of socketClient");
-		}
-		$client->set_non_block(true);
-		$client->connect($remote_address, $remote_port);
-		SocketEngine::$clients[(int)$client->socket] = $client;
-		return $client;
-	}
-*/
+	private static $clients = array();
 
 	private static function create_read_set()
 	{
