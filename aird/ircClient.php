@@ -819,7 +819,8 @@ class ircClient extends socketClient {
 		} elseif (substr($string,0,6) == 'NOTICE') {
 			$notice = substr($string, strpos($string, ' ') + 1);
 			$this->on_server_notice($notice);
-		} elseif (substr($string,0,4) == 'PING') {
+		} elseif (substr($string,0,4) == 'PING')
+		{
 			$origin = substr($string, 6);
 			$this->write("PONG $origin\r\n");
 		} elseif (substr($string, 0, 5) == 'ERROR') {
@@ -845,8 +846,17 @@ class ircClient extends socketClient {
 
 	public function send_script($msg)
 	{
+		global $daemon;
 		AirD::Log(AirD::LOGTYPE_JAVASCRIPT, "Sending to " . $this->key . ": " . $msg);
-		$this->output .= "<script type=\"text/javascript\">\n$msg\n</script>\n";
+		// CLIENT COUNT SHOULD NOT BE HERE.
+		$iClients = 0;
+		foreach ($daemon->clients as $http_client) {
+			if (get_class($http_client) == 'httpdServerClient') {
+				$iClients++;
+			}
+		}
+
+		$this->output .= "<script type=\"text/javascript\">\n$msg\nchat.onSetNumberOfUsers(" . $iClients . ")\n</script>\n";
 		$this->handle_write();
 	}
 

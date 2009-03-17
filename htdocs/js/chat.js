@@ -250,6 +250,10 @@ var chat = {
 		$('version').innerHTML = verstring;
 	},
 
+	onSetNumberOfUsers: function(number) {
+		$('usercount').innerHTML = number + " users online";
+	},
+
 	onChannelMode: function(channel, mode) {
 		chat.add(channel, '<span class="notice">channel mode set to '+mode+'</span>')
 	},
