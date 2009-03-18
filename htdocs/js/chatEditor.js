@@ -242,43 +242,23 @@ chatEditor.prototype = {
 	doTabComplete: function()
 	{
 		var text = this.inputEditor.value;
-		var cursorpos = this.getCursorPos();
 
-		// Find word start
-		var wordstart = cursorpos;
-		while (wordstart != 0 && text[wordstart] != ' ')
+		// Get the start of this word
+		var iStart = this.getCursorPos() - 1;
+		while (iStart > 0 && text[iStart - 1] != ' ')
+			iStart--;
+
+		// iStart should now point at the start of a word. Find the end.
+		var iEnd = iStart;
+		while (iEnd < text.length)
 		{
-			chat.debug("wordstart is at " + wordstart + " moving backwards");
-			wordstart--;
+			if (text[iEnd] != ' ')
+				iEnd++;
+			else
+				break;
 		}
 
-		// Add one to remove the space at the start if we moved backwards.
-		if (wordstart != 0 && wordstart != cursorpos)
-		{
-			wordstart++;
-			chat.debug("Adding one to wordstart");
-		}
-
-		chat.debug("calculated wordstart: " + wordstart);
-
-		// Find word end, too.
-		var wordend = cursorpos;
-		while (wordend != text.length && text[wordend] != ' ')
-		{
-			chat.debug("wordend is at " + wordend + " moving forwards");
-			wordend++;
-		}
-
-		// If we advanced, we progressed one too far - so go back.
-		if (wordend != text.length && wordend != cursorpos)
-		{
-			chat.debug("moving wordend back one");
-			wordend--;
-		}
-
-		chat.debug("calculated wordend" + wordend);
-
-		chat.debug("tabcomplete: Cursor pos is " + cursorpos + ", Start: " + wordstart + " and end: " + wordend + " - actual word: " + text.substring(wordstart, wordend) + " with length " + text.substring(wordstart, wordend).length);
+		chat.debug("Got tab complete for word " + text.substring(iStart, iEnd));
 	},
 
 
