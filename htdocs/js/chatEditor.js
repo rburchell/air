@@ -130,9 +130,9 @@ chatEditor.prototype = {
 		var msg = this.inputEditor.value;
 		var msgs = msg.split("\n");
 		msgs.each(function(msg) {
-			msg = msg.replace(/(<([^>]+)>)/ig,"").replace(/\n/g,'').replace(/\r/g,'');
-			msg = decodeURI(msg);
-			msg = msg.trim();
+			msg = msg.replace(/\n/g,'').replace(/\r/g,'');
+//			msg = decodeURI(msg);
+//			msg = msg.trim();
 			if (msg && msg != '') {
 				chat.message(msg);
 			}
@@ -162,7 +162,7 @@ chatEditor.prototype = {
 		// Don't allow duplicate items -- just re-blank it
 		if (this.commandHistory[0] == item)
 		{
-			chat.debug("Not adding duplicate history item " + item);
+			chat.debug("Not adding duplicate history item " + encodeURI(item));
 		}
 		else
 		{
@@ -172,7 +172,7 @@ chatEditor.prototype = {
 				this.commandHistory.pop();
 			}
 
-			chat.debug("Added item to command history, now " + this.commandHistory.length + " items. Item added is: " + item);
+			chat.debug("Added item to command history, now " + this.commandHistory.length + " items. Item added is: " + encodeURI(item));
 
 			// Add the item.
 			this.commandHistory.unshift(item);
