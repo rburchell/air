@@ -67,6 +67,11 @@ chatEditor.prototype = {
 		this.commandHistory = new Array();
 		this.historyPos = -1;
 
+		// Tab completion
+		this.isTabbing = false;
+		this.tabDictionary = {};
+		this.tabDictionaryChars = "\\_\\|a-zA-Z0-9\\-\\[\\]\\\\`\\^\\{\\}";
+
 		// Monitor keystrokes.
 		Event.observe(this.doc, 'keydown', function(event)
 		{
@@ -210,6 +215,38 @@ chatEditor.prototype = {
 		// Return this string, change position for the future.
 		return this.commandHistory[this.historyPos];
 	},
+
+	/** Add a word to the tab completion history.
+	 * @param word The word to add to the tab completion history.
+	 */
+	addTabCompleteWord: function(word)
+	{
+		this.tabDictionary[word.toLowerCase()] = word;
+	},
+
+	/** Remove a word from the tab completion history.
+	 * @param word The word to remove from tab completion history.
+	 */
+	removeTabCompleteWord: function(word)
+	{
+		delete this.tabDictionary[word.toLowerCase()];
+	},
+
+	/** Do tab completion on the input box.
+	 */
+	doTabComplete: function()
+	{
+		
+	},
+
+
+	/** Returns the position of the cursor in the inputbox.
+	 */
+	getCursorPos: function()
+	{
+	},
+
+
 
 	closeMenus: function() {
 		this.menus.each(function(menu) {
