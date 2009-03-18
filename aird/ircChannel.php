@@ -32,28 +32,27 @@ class ircChannel {
 	public function __construct($parent, $channel)
 	{
 		$this->parent  = $parent;
-		$this->channel = htmlspecialchars($channel, ENT_QUOTES, 'UTF-8');
-		$parent->send_script("chat.onJoined('$channel');");
+		$this->channel = $channel;
+		$parent->send_script("chat.onJoined('" . $this->parent->escape($this->channel) . "');");
 	}
 
 	public function __destruct()
 	{
-		$this->parent->send_script("chat.onParted('$this->channel');");
+		$this->parent->send_script("chat.onParted('" . $this->parent->escape($this->channel) . "');");
 	}
 
 	public function on_topic($topic)
 	{
 		$this->topic = $topic;
-		$topic       = htmlspecialchars($topic, ENT_QUOTES, 'UTF-8');
-		$this->parent->send_script("chat.onTopic('{$this->channel}', '$topic');");
+		$this->parent->send_script("chat.onTopic('{$this->parent->escape($this->channel)}', '" . $this->parent->escape($topic) . "');");
 	}
 
 	public function on_join($who)
 	{
 		if (!isset($this->names[$who])) {
 			$this->names[$who] = array('nickname' => $who);
-			$who               = htmlspecialchars($who, ENT_QUOTES, 'UTF-8');
-			$this->parent->send_script("chat.onJoin('{$this->channel}', '$who');");
+			$who               = $this->parent->escape($who);
+			$this->parent->send_script("chat.onJoin('{$this->parent->escape($this->channel)}', '$who');");
 		}
 	}
 
@@ -61,30 +60,30 @@ class ircChannel {
 	{
 		if (isset($this->names[$who])) {
 			unset($this->names[$who]);
-			$who     = htmlspecialchars($who, ENT_QUOTES, 'UTF-8');
-			$message = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
-			$this->parent->send_script("chat.onPart('{$this->channel}', '$who', '$message');");
+			$who     = $this->parent->escape($who);
+			$message = $this->parent->escape($message);
+			$this->parent->send_script("chat.onPart('{$this->parent->escape($this->channel)}', '$who', '$message');");
 		}
 	}
 
 	public function on_kick($from, $who, $reason)
 	{
 		unset($this->names[$who]);
-		$who    = htmlspecialchars($who,    ENT_QUOTES, 'UTF-8');
-		$from   = htmlspecialchars($from,   ENT_QUOTES, 'UTF-8');
-		$reason = htmlspecialchars($reason, ENT_QUOTES, 'UTF-8');
+		$who    = $this->parent->escape($who);
+		$from   = $this->parent->escape($from);
+		$reason = $this->parent->escape($reason);
 		if ($this->parent->nick == $who) {
-			$this->parent->send_script("chat.onKicked('{$this->channel}','$from', '$who', '$reason');");
+			$this->parent->send_script("chat.onKicked('{$this->parent->escape($this->channel)}','$from', '$who', '$reason');");
 		} else {
-			$this->parent->send_script("chat.onKick('{$this->channel}','$from', '$who', '$reason');");
+			$this->parent->send_script("chat.onKick('{$this->parent->escape($this->channel)}','$from', '$who', '$reason');");
 		}
 	}
 
 	public function on_mode($mode)
 	{
 		$this->mode = $mode;
-		$mode = htmlspecialchars($mode, ENT_QUOTES, 'UTF-8');
-		$this->parent->send_script("chat.onChannelMode('{$this->channel}','$mode');");
+		$mode = $this->parent->escape($mode);
+		$this->parent->send_script("chat.onChannelMode('{$this->parent->escape($this->channel)}','$mode');");
 	}
 
 	public function on_nick($from, $to)
@@ -94,9 +93,9 @@ class ircChannel {
 			$member['nickname'] = $to;
 			unset($this->names[$from]);
 			$this->names[$to] = $member;
-			$from = str_replace('\\','\\\\', htmlentities($from, ENT_QUOTES, 'UTF-8'));
-			$to   = str_replace('\\','\\\\', htmlentities($to,   ENT_QUOTES, 'UTF-8'));
-			$this->parent->send_script("chat.onNick('{$this->channel}', '$from', '$to');");
+			$from = $this->parent->escape($from);
+			$to   = $this->parent->escape($to);
+			$this->parent->send_script("chat.onNick('{$this->parent->escape($this->channel)}', '$from', '$to');");
 		}
 	}
 
@@ -104,8 +103,8 @@ class ircChannel {
 	{
 		if (isset($this->names[$who])) {
 			unset($this->names[$who]);
-			$who = htmlspecialchars($who, ENT_QUOTES, 'UTF-8');
-			$this->parent->send_script("chat.onPart('{$this->channel}', '$who', 'Quit');");
+			$who = $this->parent->escape($who);
+			$this->parent->send_script("chat.onPart('{$this->parent->escape($this->channel)}', '$who', 'Quit');");
 		}
 	}
 
@@ -121,8 +120,8 @@ class ircChannel {
 				$voice = 'true';
 			}
 			$this->names[$name] = array('nickname' => $name, 'operator' => $operator, 'voice' => $voice);
-			$name = str_replace('\\','\\\\', htmlspecialchars($name, ENT_QUOTES, 'UTF-8'));
-			$this->parent->send_script("chat.addMember('{$this->channel}' ,'$name', $operator, $voice);");
+			$name = $this->parent->escape($name);
+			$this->parent->send_script("chat.addMember('{$this->parent->escape($this->channel)}' ,'$name', $operator, $voice);");
 		}
 	}
 
@@ -137,7 +136,7 @@ class ircChannel {
 
 	public function end_of_names()
 	{
-		$this->parent->send_script("chat.renderMembers('{$this->channel}');");
+		$this->parent->send_script("chat.renderMembers('{$this->parent->escape($this->channel)}');");
 	}
 
 	public function end_of_who() {}
@@ -158,9 +157,9 @@ class ircChannel {
 	{
 		if (isset($this->names[$nick])) {
 			$this->names[$nick]['operator'] = true;
-			$nick = htmlspecialchars($nick, ENT_QUOTES, 'UTF-8');
-			$from = htmlspecialchars($from, ENT_QUOTES, 'UTF-8');
-			$this->parent->send_script("chat.opMember('{$this->channel}', '$nick', '$from');");
+			$nick = $this->parent->escape($nick);
+			$from = $this->parent->escape($from);
+			$this->parent->send_script("chat.opMember('{$this->parent->escape($this->channel)}', '$nick', '$from');");
 		}
 	}
 
@@ -168,9 +167,9 @@ class ircChannel {
 	{
 		if (isset($this->names[$nick])) {
 			$this->names[$nick]['operator'] = false;
-			$nick = htmlspecialchars($nick, ENT_QUOTES, 'UTF-8');
-			$from = htmlspecialchars($from, ENT_QUOTES, 'UTF-8');
-			$this->parent->send_script("chat.deopMember('{$this->channel}', '$nick', '$from');");
+			$nick = $this->parent->escape($nick);
+			$from = $this->parent->escape($from);
+			$this->parent->send_script("chat.deopMember('{$this->parent->escape($this->channel)}', '$nick', '$from');");
 		}
 	}
 
@@ -178,9 +177,9 @@ class ircChannel {
 	{
 		if (isset($this->names[$nick])) {
 			$this->names[$nick]['voice'] = true;
-			$nick = htmlspecialchars($nick, ENT_QUOTES, 'UTF-8');
-			$from = htmlspecialchars($from, ENT_QUOTES, 'UTF-8');
-			$this->parent->send_script("chat.voiceMember('{$this->channel}', '$nick', '$from');");
+			$nick = $this->parent->escape($nick);
+			$from = $this->parent->escape($from);
+			$this->parent->send_script("chat.voiceMember('{$this->parent->escape($this->channel)}', '$nick', '$from');");
 		}
 	}
 
@@ -188,35 +187,35 @@ class ircChannel {
 	{
 		if (isset($this->names[$nick])) {
 			$this->names[$nick]['voice'] = false;
-			$nick = htmlspecialchars($nick, ENT_QUOTES, 'UTF-8');
-			$from = htmlspecialchars($from, ENT_QUOTES, 'UTF-8');
-			$this->parent->send_script("chat.devoiceMember('{$this->channel}', '$nick', '$from');");
+			$nick = $this->parent->escape($nick);
+			$from = $this->parent->escape($from);
+			$this->parent->send_script("chat.devoiceMember('{$this->parent->escape($this->channel)}', '$nick', '$from');");
 		}
 	}
 
 	public function set_key($key = false, $from)
 	{
 		$this->key = $key;
-		$key  = htmlspecialchars($key, ENT_QUOTES, 'UTF-8');
-		$from = htmlspecialchars($from, ENT_QUOTES, 'UTF-8');
-		$this->parent->send_script("chat.setKey('{$this->channel}', '$key', '$from');");
+		$key  = $this->parent->escape($key);
+		$from = $this->parent->escape($from);
+		$this->parent->send_script("chat.setKey('{$this->parent->escape($this->channel)}', '$key', '$from');");
 	}
 
 	public function add_ban($hostmask, $from)
 	{
 		$this->bans[$hostmask] = $hostmask;
-		$from = htmlspecialchars($from, ENT_QUOTES, 'UTF-8');
-		$hostmask = htmlspecialchars($hostmask, ENT_QUOTES, 'UTF-8');
-		$this->parent->send_script("chat.addBan('{$this->channel}', '$hostmask', '$from');");
+		$from = $this->parent->escape($from);
+		$hostmask = $this->parent->escape($hostmask);
+		$this->parent->send_script("chat.addBan('{$this->parent->escape($this->channel)}', '$hostmask', '$from');");
 	}
 
 	public function remove_ban($hostmask, $from)
 	{
 		if (isset($this->bans[$hostmask])) {
 			unset($this->bans[$hostmask]);
-			$from = htmlspecialchars($from, ENT_QUOTES, 'UTF-8');
-			$hostmask = htmlspecialchars($hostmask, ENT_QUOTES, 'UTF-8');
-			$this->parent->send_script("chat.removeBan('{$this->channel}', '$hostmask', '$from');");
+			$from = $this->parent->escape($from);
+			$hostmask = $this->parent->escape($hostmask);
+			$this->parent->send_script("chat.removeBan('{$this->parent->escape($this->channel)}', '$hostmask', '$from');");
 		}
 	}
 }
