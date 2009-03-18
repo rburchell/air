@@ -66,7 +66,7 @@ class ircClient extends socketClient
 		unset(AirD::$aIRCClients[$this->key]);
 	}
 
-	private function escape($s)
+	public function escape($s)
 	{
 		$s = str_replace("\\", "\\\\", $s);
 		$s = htmlentities($s, ENT_QUOTES, 'UTF-8');
