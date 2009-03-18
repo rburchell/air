@@ -130,12 +130,31 @@ class HTTPClientServer extends socketServerClient
 					$file = '../htdocs'.$request['url'];
 					if (file_exists($file) && is_file($file)) {
 						AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a file: " . $file,  true);
+
+						// Do basic mime type sniffing. Required for Chrome, and a good idea anyway.
+						$sContentType = "";
+						$aExt = explode(".", basename($file));
+						if (isset($aExt[1]))
+						{
+							switch (strtolower($aExt[1]))
+							{
+								case "css":
+									$sContentType = "text/css";
+									break;
+								case "js":
+									$sContentType = "text/javascript";
+									break;
+							}
+						}
+
 						// rewrite header
 						$header  = "HTTP/{$request['version']} 200 OK\r\n";
 						$header .= "Accept-Ranges: bytes\r\n";
 						$header .= 'Last-Modified: '.gmdate('D, d M Y H:i:s T', filemtime($file))."\r\n";
 						$size    = filesize($file);
 						$header .= "Content-Length: $size\r\n";
+						if (!empty($sContentType))
+							$header .= "Content-Type: " . $sContentType . "\r\n";
 						$output  = file_get_contents($file);
 					} else {
 						AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a NONEXISTANT file: " . $file,  true);
