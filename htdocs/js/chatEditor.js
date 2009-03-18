@@ -59,8 +59,7 @@ chatEditor.prototype = {
 		this.ITALIC    = String.fromCharCode(4);
 		this.UNDERLINE = String.fromCharCode(31);
 		// and create html editor..
-		this.doc = $('editor_edit').contentWindow.document;
-		this.doc.designMode = 'on';
+		this.inputEditor = $('editor_edit').contentWindow.document.getElementById('editor_input');
 		this.createMenu();
 
 		// Command history holder.
@@ -71,9 +70,10 @@ chatEditor.prototype = {
 		this.isTabbing = false;
 		this.tabDictionary = {};
 		this.tabDictionaryChars = "\\_\\|a-zA-Z0-9\\-\\[\\]\\\\`\\^\\{\\}";
+		this.tabResult = 0;
 
 		// Monitor keystrokes.
-		Event.observe(this.doc, 'keydown', function(event)
+		Event.observe(this.inputEditor, 'keydown', function(event)
 		{
 			switch (event.keyCode)
 			{
@@ -82,7 +82,8 @@ chatEditor.prototype = {
 					if (!event.shiftKey)
 					{
 						this.send();
-						return false;
+						Event.stop(event);
+						return;
 					}
 
 					// No, I have no idea what this is for.
@@ -92,28 +93,31 @@ chatEditor.prototype = {
 					}
 					break;
 				case Event.KEY_TAB:
-					alert("Tab completion ain't done. Live with it. Sorry.");
-					return false;
+					this.doTabComplete();
+					Event.stop(event);
+					return;
 					break;
 				case Event.KEY_DOWN:
 					var item = this.historyGetNext();
 					if (item != null)
 					{
-						this.doc.body.innerHTML = item;
+						this.inputEditor.value = item;
 					}
 					else
 					{
-						this.doc.body.innerHTML = "";
+						this.inputEditor.value = "";
 					}
-					return false;
+					Event.stop(event);
+					return;
 					break;
 				case Event.KEY_UP:
 					var item = this.historyGetPrevious();
 					if (item != null)
 					{
-						this.doc.body.innerHTML = item;
+						this.inputEditor.value = item;
 					}
-					return false;
+					Event.stop(event);
+					return;
 					break;
 			}
 		}.bind(this));
@@ -122,7 +126,8 @@ chatEditor.prototype = {
 
 	send: function() {
 		// Remove returns and translate WYSIWYG html code to mIRC compatible control codes (see chatChannel.js colorize function for the recieving end)
-		var msg = this.translateTags(this.doc.body.innerHTML.toString().replace(/<br \/>/g,"\n").replace(/<br>/g,"\n").replace(/&nbsp;/g,' '));
+//		var msg = this.translateTags(this.doc.body.innerHTML.toString().replace(/<br \/>/g,"\n").replace(/<br>/g,"\n").replace(/&nbsp;/g,' '));
+		var msg = this.inputEditor.value;
 		var msgs = msg.split("\n");
 		msgs.each(function(msg) {
 			msg = msg.replace(/(<([^>]+)>)/ig,"").replace(/\n/g,'').replace(/\r/g,'');
@@ -134,17 +139,17 @@ chatEditor.prototype = {
 		});
 
 		// Add this item to history.
-		this.historyAddItem(this.doc.body.innerHTML);
+		this.historyAddItem(this.inputEditor.value);
 		setTimeout("chat.editor.clear();",10);
 	},
 
-	focus: function() {
-		$('editor_edit').scrollTop = 0;
-		$('editor_edit').contentWindow.focus();
+	focus: function()
+	{
+		this.inputEditor.focus();
 	},
 
 	clear: function() {
-		this.doc.body.innerHTML = '&nbsp;';
+		this.inputEditor.value = '';
 		this.focus();
 	},
 
@@ -236,7 +241,44 @@ chatEditor.prototype = {
 	 */
 	doTabComplete: function()
 	{
-		
+		var text = this.inputEditor.value;
+		var cursorpos = this.getCursorPos();
+
+		// Find word start
+		var wordstart = cursorpos;
+		while (wordstart != 0 && text[wordstart] != ' ')
+		{
+			chat.debug("wordstart is at " + wordstart + " moving backwards");
+			wordstart--;
+		}
+
+		// Add one to remove the space at the start if we moved backwards.
+		if (wordstart != 0 && wordstart != cursorpos)
+		{
+			wordstart++;
+			chat.debug("Adding one to wordstart");
+		}
+
+		chat.debug("calculated wordstart: " + wordstart);
+
+		// Find word end, too.
+		var wordend = cursorpos;
+		while (wordend != text.length && text[wordend] != ' ')
+		{
+			chat.debug("wordend is at " + wordend + " moving forwards");
+			wordend++;
+		}
+
+		// If we advanced, we progressed one too far - so go back.
+		if (wordend != text.length && wordend != cursorpos)
+		{
+			chat.debug("moving wordend back one");
+			wordend--;
+		}
+
+		chat.debug("calculated wordend" + wordend);
+
+		chat.debug("tabcomplete: Cursor pos is " + cursorpos + ", Start: " + wordstart + " and end: " + wordend + " - actual word: " + text.substring(wordstart, wordend) + " with length " + text.substring(wordstart, wordend).length);
 	},
 
 
@@ -244,6 +286,22 @@ chatEditor.prototype = {
 	 */
 	getCursorPos: function()
 	{
+		if (typeof this.inputEditor.selectionStart!="undefined")
+		{
+			return this.inputEditor.selectionStart
+		}
+		else
+		{
+			if (this.inputEditor.createTextRange)
+			{
+				// IE loves doing things differently.
+				var A = document.selection.createRange();
+				var B = A.getBookmark();
+				return B.charCodeAt(2) - 2;
+			}
+
+		}
+		return v.length
 	},
 
 
