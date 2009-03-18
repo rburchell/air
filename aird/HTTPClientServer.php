@@ -114,7 +114,8 @@ class HTTPClientServer extends socketServerClient
 					{
 						$sChannel = urldecode($params['channel']);
 						AirD::Log(AirD::LOGTYPE_HTTP, "Got a command from client " . $params['key'] . " in " . $params['channel'] . ": " . urldecode($params['msg']),  true);
-						AirD::$aIRCClients[$params['key']]->message($sChannel, html_entity_decode(urldecode($params['msg'])));
+						if (isset(AirD::$aIRCClients[$params['key']]))
+							AirD::$aIRCClients[$params['key']]->message($sChannel, html_entity_decode(urldecode($params['msg'])));
 					}
 					$output  = "<script type=\"text/javascript\"></script>\r\n";
 					$header  = "HTTP/{$request['version']} 200 OK\r\n";
