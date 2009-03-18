@@ -258,9 +258,40 @@ chatEditor.prototype = {
 				break;
 		}
 
+		// XXX: Eventually, we'll have three lists for tab completion:
+		// Recently used, global list, per-channel.
+		// Recently used will contain items that have been used recently (like /msg somefag hi).
+		// Global will contain all items that are application-wide, like channel names and commands.
+		// Per-channel will contain the nicklist.
+//		if (chat.current != "info"
+		var curchan = chat.channel(chat.current);
+
+		for (var i = 0; i < chat.channel(chat.current).members.members.length; i++)
+		{
+			var m = chat.channel(chat.current).members.members[i];
+			chat.debug("Comparing against " + m.who);
+
+			// 'm' is the channel member, we only want to compare iEnd - iStart characters of their nick, though.
+			if (m.who.substring(0, iEnd - iStart).toLowerCase() == text.substring(iStart, iEnd).toLowerCase())
+			{
+				chat.debug("MATCH! " + m.who);
+				// We now want to insert the *latter half* of this word into the input.
+				this.insertText(this.getCursorPos(), m.who.substring(iEnd, m.who.length));
+				break;
+			}
+		}
+
 		chat.debug("Got tab complete for word " + text.substring(iStart, iEnd));
 	},
 
+	insertText: function(pos, newtext)
+	{
+		var text = this.inputEditor.value;
+		var textbeforepos = text.substring(0,pos);
+		var textafterpos = text.substring(pos,text.length);
+		this.inputEditor.value = textbeforepos + newtext + textafterpos;
+		this.goToPos(textbeforepos.length + newtext.length)
+	},
 
 	/** Returns the position of the cursor in the inputbox.
 	 */
