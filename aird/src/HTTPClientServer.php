@@ -237,13 +237,6 @@ class HTTPClientServer extends socketServerClient
 		}
 	}
 
-	public function write($s, $l = 4444)
-	{
-//		if ($this->streaming_client)
-//			AirD::Log(AirD::LOGTYPE_HTTP, "Writing " . $s . " to client");
-		parent::write($s, $l);
-	}
-
 	public function on_write()
 	{
 		if (strlen($this->write_buffer) == 0 && !$this->keep_alive && !$this->streaming_client) {
