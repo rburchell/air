@@ -70,6 +70,7 @@ class ircClient extends socketClient
 	public function escape($s)
 	{
 		$s = str_replace("\\", "\\\\", $s);
+//		$s = str_replace("'", "\\'", $s);
 		$s = htmlentities($s, ENT_QUOTES, 'UTF-8');
 		return $s;
 	}
@@ -562,13 +563,13 @@ class ircClient extends socketClient
 	private function rpl_motdstart($from, $command, $to, $param)
 	{
 		$line = $this->escape($param);
-		$this->send_script("chat.onMotd('" . $this->escape($line) . "');");
+		$this->send_script("chat.onMotd('" . $line . "');");
 	}
 
 	private function rpl_motd($from, $command, $to, $param)
 	{
 		$line = $this->escape($param);
-		$this->send_script("chat.onMotd('" . $this->escape($line) . "');");
+		$this->send_script("chat.onMotd('" . $line . "');");
 	}
 
 	private function rpl_endofmotd($from, $command, $to, $param)
