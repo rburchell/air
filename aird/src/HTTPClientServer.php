@@ -105,7 +105,7 @@ class HTTPClientServer extends socketServerClient
 								 "<script type=\"text/javascript\">\nvar chat = window.parent.chat;\nchat.key = '{$this->key}';\nchat.connected = true;\n</script>\n".
 								 "</head>\n".
 								 "<body>\n";*/
-				$output    =  "chat.key = '{$this->key}';\nthis.connected = true;\nalert(this.key)\n";
+				$output    =  "chat.key = '{$this->key}';\nthis.connected = true;\n";
 
 					if (!empty($client->output)) {
 						$output .= $client->output;
@@ -234,6 +234,11 @@ class HTTPClientServer extends socketServerClient
 		if (($total_time > $this->max_total_time || $idle_time > $this->max_idle_time) && !$this->streaming_client) {
 			$this->close();
 			$this->on_disconnect();
+		}
+
+		if ($this->streaming_client)
+		{
+			$this->irc_client->send_script('chat.onSetNumberOfUsers(' . count(AirD::$aIRCClients) . ');');
 		}
 	}
 
