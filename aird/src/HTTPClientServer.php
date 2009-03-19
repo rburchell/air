@@ -83,9 +83,6 @@ class HTTPClientServer extends socketServerClient
 			$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
 			switch ($request['url']) {
 				case '/get':
-					$header  = "HTTP/{$request['version']} 200 OK\r\n";
-					$header .= "Cache-Control: no-cache, must-revalidate\r\n";
-					$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
 					// streaming iframe/comet communication (hanging get), don't send content-length!
 					$nickname               = isset($params['nickname']) ? $params['nickname'] : 'chabot';
 					$server = "208.68.93.158";
@@ -98,12 +95,18 @@ class HTTPClientServer extends socketServerClient
 					$client->nick           = $nickname;
 					$this->irc_client       = $client;
 					$this->streaming_client = true;
-					$output    = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n".
+					$header = "";
+					$header  = "HTTP/{$request['version']} 200 OK\r\n";
+					$header .= "Cache-Control: no-cache, must-revalidate\r\n";
+					$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
+					/*$output    = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n".
 								 "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n".
 								 "<head>\n".
 								 "<script type=\"text/javascript\">\nvar chat = window.parent.chat;\nchat.key = '{$this->key}';\nchat.connected = true;\n</script>\n".
 								 "</head>\n".
-								 "<body>\n";
+								 "<body>\n";*/
+				$output    =  "chat.key = '{$this->key}';\nthis.connected = true;\n";
+
 					if (!empty($client->output)) {
 						$output .= $client->output;
 						$client->output = '';
@@ -130,12 +133,31 @@ class HTTPClientServer extends socketServerClient
 					$file = '../htdocs'.$request['url'];
 					if (file_exists($file) && is_file($file)) {
 						AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a file: " . $file,  true);
+
+						// Do basic mime type sniffing. Required for Chrome, and a good idea anyway.
+						$sContentType = "";
+						$aExt = explode(".", basename($file));
+						if (isset($aExt[1]))
+						{
+							switch (strtolower($aExt[1]))
+							{
+								case "css":
+									$sContentType = "text/css";
+									break;
+								case "js":
+									$sContentType = "text/javascript";
+									break;
+							}
+						}
+
 						// rewrite header
 						$header  = "HTTP/{$request['version']} 200 OK\r\n";
 						$header .= "Accept-Ranges: bytes\r\n";
 						$header .= 'Last-Modified: '.gmdate('D, d M Y H:i:s T', filemtime($file))."\r\n";
 						$size    = filesize($file);
 						$header .= "Content-Length: $size\r\n";
+						if (!empty($sContentType))
+							$header .= "Content-Type: " . $sContentType . "\r\n";
 						$output  = file_get_contents($file);
 					} else {
 						AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a NONEXISTANT file: " . $file,  true);
@@ -212,6 +234,11 @@ class HTTPClientServer extends socketServerClient
 		if (($total_time > $this->max_total_time || $idle_time > $this->max_idle_time) && !$this->streaming_client) {
 			$this->close();
 			$this->on_disconnect();
+		}
+
+		if ($this->streaming_client)
+		{
+			$this->irc_client->send_script('chat.onSetNumberOfUsers(' . count(AirD::$aIRCClients) . ');');
 		}
 	}
 

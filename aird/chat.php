@@ -31,7 +31,7 @@ set_time_limit(0);
 function __autoload($sClass)
 {
 	AirD::Log(AirD::LOGTYPE_INTERNAL, "Loading " . $sClass);
-	include("./" . $sClass . ".php");
+	include("./src/" . $sClass . ".php");
 
 	if (!class_exists($sClass))
 		AirD::Log(AirD::LOGTYPE_INTERNAL, "Loaded " . $sClass . " as a file, but class still doesn't exist. Aiee.");

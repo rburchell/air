@@ -6,8 +6,8 @@ var chatEditorResizer = Class.create();
 chatEditorResizer.prototype = {
 	initialize: function() {
 		this.divSend        = $('send');
-		this.divEditor      = $('editor_div');
-		this.divEdit        = $('editor_edit');
+		this.divEditor      = $('editor_input');
+//		this.divEdit        = $('editor_edit');
 		this.divSizer       = $('editor_resizer');
 		this.eventMouseDown = this.initDrag.bindAsEventListener(this);
 		this.eventMouseMove = this.updateDrag.bindAsEventListener(this);
@@ -44,7 +44,7 @@ chatEditorResizer.prototype = {
 			channel.onResize();
 		});
 		this.divEditor.setStyle({ height : parseFloat(newHeight - 21) + 'px'});
-		this.divEdit.setStyle({   height : parseFloat(newHeight - 21) + 'px'});
+//		this.divEdit.setStyle({   height : parseFloat(newHeight - 21) + 'px'});
 	}
 }
 
@@ -59,16 +59,21 @@ chatEditor.prototype = {
 		this.ITALIC    = String.fromCharCode(4);
 		this.UNDERLINE = String.fromCharCode(31);
 		// and create html editor..
-		this.doc = $('editor_edit').contentWindow.document;
-		this.doc.designMode = 'on';
+		this.inputEditor = $('editor_input');
 		this.createMenu();
 
 		// Command history holder.
 		this.commandHistory = new Array();
 		this.historyPos = -1;
 
+		// Tab completion
+		this.isTabbing = false;
+		this.tabDictionary = {};
+		this.tabDictionaryChars = "\\_\\|a-zA-Z0-9\\-\\[\\]\\\\`\\^\\{\\}";
+		this.tabResult = 0;
+
 		// Monitor keystrokes.
-		Event.observe(this.doc, 'keydown', function(event)
+		Event.observe(this.inputEditor, 'keydown', function(event)
 		{
 			switch (event.keyCode)
 			{
@@ -77,7 +82,8 @@ chatEditor.prototype = {
 					if (!event.shiftKey)
 					{
 						this.send();
-						return false;
+						Event.stop(event);
+						return;
 					}
 
 					// No, I have no idea what this is for.
@@ -87,28 +93,31 @@ chatEditor.prototype = {
 					}
 					break;
 				case Event.KEY_TAB:
-					alert("Tab completion ain't done. Live with it. Sorry.");
-					return false;
+					this.doTabComplete();
+					Event.stop(event);
+					return;
 					break;
 				case Event.KEY_DOWN:
 					var item = this.historyGetNext();
 					if (item != null)
 					{
-						this.doc.body.innerHTML = item;
+						this.inputEditor.value = item;
 					}
 					else
 					{
-						this.doc.body.innerHTML = "";
+						this.inputEditor.value = "";
 					}
-					return false;
+					Event.stop(event);
+					return;
 					break;
 				case Event.KEY_UP:
 					var item = this.historyGetPrevious();
 					if (item != null)
 					{
-						this.doc.body.innerHTML = item;
+						this.inputEditor.value = item;
 					}
-					return false;
+					Event.stop(event);
+					return;
 					break;
 			}
 		}.bind(this));
@@ -117,29 +126,30 @@ chatEditor.prototype = {
 
 	send: function() {
 		// Remove returns and translate WYSIWYG html code to mIRC compatible control codes (see chatChannel.js colorize function for the recieving end)
-		var msg = this.translateTags(this.doc.body.innerHTML.toString().replace(/<br \/>/g,"\n").replace(/<br>/g,"\n").replace(/&nbsp;/g,' '));
+	//	var msg = this.translateTags(this.inputEditor.value);
+		var msg = this.inputEditor.value;
 		var msgs = msg.split("\n");
 		msgs.each(function(msg) {
-			msg = msg.replace(/(<([^>]+)>)/ig,"").replace(/\n/g,'').replace(/\r/g,'');
-			msg = decodeURI(msg);
-			msg = msg.trim();
+			msg = msg.replace(/\n/g,'').replace(/\r/g,'');
+//			msg = decodeURI(msg);
+//			msg = msg.trim();
 			if (msg && msg != '') {
 				chat.message(msg);
 			}
 		});
 
 		// Add this item to history.
-		this.historyAddItem(this.doc.body.innerHTML);
+		this.historyAddItem(this.inputEditor.value);
 		setTimeout("chat.editor.clear();",10);
 	},
 
-	focus: function() {
-		$('editor_edit').scrollTop = 0;
-		$('editor_edit').contentWindow.focus();
+	focus: function()
+	{
+		this.inputEditor.focus();
 	},
 
 	clear: function() {
-		this.doc.body.innerHTML = '&nbsp;';
+		this.inputEditor.value = '';
 		this.focus();
 	},
 
@@ -152,7 +162,7 @@ chatEditor.prototype = {
 		// Don't allow duplicate items -- just re-blank it
 		if (this.commandHistory[0] == item)
 		{
-			chat.debug("Not adding duplicate history item " + item);
+			chat.debug("Not adding duplicate history item " + encodeURI(item));
 		}
 		else
 		{
@@ -162,7 +172,7 @@ chatEditor.prototype = {
 				this.commandHistory.pop();
 			}
 
-			chat.debug("Added item to command history, now " + this.commandHistory.length + " items. Item added is: " + item);
+			chat.debug("Added item to command history, now " + this.commandHistory.length + " items. Item added is: " + encodeURI(item));
 
 			// Add the item.
 			this.commandHistory.unshift(item);
@@ -211,6 +221,120 @@ chatEditor.prototype = {
 		return this.commandHistory[this.historyPos];
 	},
 
+	/** Add a word to the tab completion history.
+	 * @param word The word to add to the tab completion history.
+	 */
+	addTabCompleteWord: function(word)
+	{
+		this.tabDictionary[word.toLowerCase()] = word;
+	},
+
+	/** Remove a word from the tab completion history.
+	 * @param word The word to remove from tab completion history.
+	 */
+	removeTabCompleteWord: function(word)
+	{
+		delete this.tabDictionary[word.toLowerCase()];
+	},
+
+	/** Do tab completion on the input box.
+	 */
+	doTabComplete: function()
+	{
+		var text = this.inputEditor.value;
+
+		// Get the start of this word
+		var iStart = this.getCursorPos() - 1;
+		while (iStart > 0 && text[iStart - 1] != ' ')
+			iStart--;
+
+		// iStart should now point at the start of a word. Find the end.
+		var iEnd = iStart;
+		while (iEnd < text.length)
+		{
+			if (text[iEnd] != ' ')
+				iEnd++;
+			else
+				break;
+		}
+
+		// XXX: Eventually, we'll have three lists for tab completion:
+		// Recently used, global list, per-channel.
+		// Recently used will contain items that have been used recently (like /msg somefag hi).
+		// Global will contain all items that are application-wide, like channel names and commands.
+		// Per-channel will contain the nicklist.
+//		if (chat.current != "info"
+		var curchan = chat.channel(chat.current);
+
+		for (var i = 0; i < chat.channel(chat.current).members.members.length; i++)
+		{
+			var m = chat.channel(chat.current).members.members[i];
+			chat.debug("Comparing against " + m.who);
+
+			// 'm' is the channel member, we only want to compare iEnd - iStart characters of their nick, though.
+			if (m.who.substring(0, iEnd - iStart).toLowerCase() == text.substring(iStart, iEnd).toLowerCase())
+			{
+				chat.debug("MATCH! " + m.who);
+				// We now want to insert the *latter half* of this word into the input.
+				this.insertText(this.getCursorPos(), m.who.substring(iEnd, m.who.length));
+				break;
+			}
+		}
+
+		chat.debug("Got tab complete for word " + text.substring(iStart, iEnd));
+	},
+
+	insertText: function(pos, newtext)
+	{
+		var text = this.inputEditor.value;
+		var textbeforepos = text.substring(0,pos);
+		var textafterpos = text.substring(pos,text.length);
+		this.inputEditor.value = textbeforepos + newtext + textafterpos;
+		this.changeCursorPos(textbeforepos.length + newtext.length)
+	},
+
+	changeCursorPos: function(newpos)
+	{
+		if(typeof this.inputEditor.selectionStart!="undefined")
+		{
+			this.inputEditor.setSelectionRange(newpos,newpos)
+		}
+		else
+		{
+			if(this.inputEditor.createTextRange)
+			{
+				var tmp=this.inputEditor.createTextRange();
+				tmp.move("character", newpos);
+				tmp.select()
+			}
+
+		}
+	},
+
+	/** Returns the position of the cursor in the inputbox.
+	 */
+	getCursorPos: function()
+	{
+		if (typeof this.inputEditor.selectionStart!="undefined")
+		{
+			return this.inputEditor.selectionStart
+		}
+		else
+		{
+			if (this.inputEditor.createTextRange)
+			{
+				// IE loves doing things differently.
+				var A = document.selection.createRange();
+				var B = A.getBookmark();
+				return B.charCodeAt(2) - 2;
+			}
+
+		}
+		return v.length
+	},
+
+
+
 	closeMenus: function() {
 		this.menus.each(function(menu) {
 			menu.hide();
@@ -236,27 +360,10 @@ chatEditor.prototype = {
 		}.bind(this));
 	},
 
-	execCommand: function(cmd, opt) {
-		var option = opt != undefined ? opt : false;
-		try {
-			this.doc.execCommand(cmd, false, option);
-		} catch(e) {
-			alert('Error executing command');
-		}
-	},
-
 	translateTags: function(str) {
-		//<span style="color: red;">
-		var code    = new RegExp('<span style="color: (.*?);">(.*?)<\/span>', 'igm');
-		var newStr  = str;
-		while (matches = code.exec(str)) {
-			if (matches != undefined && matches.length > 2) {
-				var toReplace = str.substring(matches.index, code.lastIndex);
-				var out       = String.fromCharCode(3)+this.getColor(matches[1].trim().toLowerCase())+matches[2]+String.fromCharCode(15);
-				newStr = newStr.replace(toReplace, out, 'igm');
-			}
-		}
-		str = newStr;
+		// XXX: We should probably make sure that the user has actually set a colour before appending colour codes..
+		if (str[0] != '/')
+			str = String.fromCharCode(4) + this.getColor(this.inputEditor.style) + str + String.fromCharCode(15);
 		var RegExpCode = [
 		['<(\/?)P>|</DIV>|&nbsp;',                                                                         ''],
 		['<STRONG>(.*?)<\/STRONG>',                                                                        this.BOLD + '$1' + this.END],
@@ -408,7 +515,40 @@ Object.extend(Object.extend(chatEditorPopup.prototype, chatEditorButton.prototyp
 	onSelect: function(event) {
 		var element = Event.element(event);
 		var option = this.command == 'smile' ? element.src : element.style.backgroundColor;
-		chat.editor.execCommand(this.command, option);
+		if (this.command == "smile")
+		{
+			var smilies = new Array();
+			smilies['biggrin.gif']			= ':D';
+			smilies['smile.gif']			= ':)';
+			smilies['sad.gif']			= ':(';
+			smilies['surprised.gif']		= ':o';
+			smilies['shock.gif']			= ':shock:';
+			smilies['confused.gif']			= ':?';
+			smilies['cool.gif']			= '8)';
+			smilies['lol.gif']			= ':lol:';
+			smilies['mad.gif']			= ':x';
+			smilies['razz.gif']			= ':p';
+			smilies['redface.gif']			= '::oops:';
+			smilies['cry.gif']			= ':cry:';
+			smilies['evil.gif']			= ':evil:';
+			smilies['badgrin.gif']			= ':badgrin:';
+			smilies['rolleyes.gif']			= ':roll:';
+			smilies['wink.gif']			= ';)';
+			smilies['exclaim.gif']			= ':!:';
+			smilies['question.gif']			= ':?:';
+			smilies['idea.gif']			= ':idea:';
+			smilies['arrow.gif']			= ':arrow:';
+			smilies['neutral.gif']			= ':|';
+			smilies['doubt.gif']			= ':doubt:';
+
+			// We need to do this replace magic because we determine smiley by filename.
+			// I'm *well* aware this is absolutely fugly, but it works.
+			chat.editor.insertText(chat.editor.getCursorPos(), smilies[element.src.replace(/^.*[\/\\]/g, '')]);
+		}
+		else
+		{
+			chat.editor.inputEditor.style.color = option;
+		}
 		this.hide();
 		chat.editor.focus();
 	}
@@ -433,7 +573,7 @@ Object.extend(Object.extend(chatColorPopup.prototype, chatEditorPopup.prototype)
 		'aqua',
 		'blue',
 		'fuchsia',
-		'gray'
+		'gray',
 		];
 		var menuDiv = $(this.divContent);
 		var cmd     = this.command;
@@ -452,35 +592,36 @@ chatSmiliePopup = Class.create();
 Object.extend(Object.extend(chatSmiliePopup.prototype, chatEditorPopup.prototype), {
 	populate: function() {
 		var smilies = [
-		'biggrin.gif',
-		'smile.gif',
-		'sad.gif',
-		'surprised.gif',
-		'shock.gif',
-		'confused.gif',
-		'cool.gif',
-		'lol.gif',
-		'mad.gif',
-		'razz.gif',
-		'redface.gif',
-		'cry.gif',
-		'evil.gif',
-		'badgrin.gif',
-		'rolleyes.gif',
-		'wink.gif',
-		'exclaim.gif',
-		'question.gif',
-		'idea.gif',
-		'arrow.gif',
-		'neutral.gif',
-		'doubt.gif'
+
+			['biggrin.gif', ':D'],
+			['smile.gif', ':)'],
+			['sad.gif', ':('],
+			['surprised.gif', ':o'],
+			['shock.gif', ':shock:'],
+			['confused.gif', ':?'],
+			['cool.gif', '8)'],
+			['lol.gif', ':lol:'],
+			['mad.gif', ':x'],
+			['razz.gif', ':p'],
+			['redface.gif', '::oops:'],
+			['cry.gif', ':cry:'],
+			['evil.gif', ':evil:'],
+			['badgrin.gif', ':badgrin:'],
+			['rolleyes.gif', ':roll:'],
+			['wink.gif', ';)'],
+			['exclaim.gif', ':!:'],
+			['question.gif', ':?:'],
+			['idea.gif', ':idea:'],
+			['arrow.gif', ':arrow:'],
+			['neutral.gif', ':|'],
+			['doubt.gif', ':doubt:']
 		];
 		menuDiv = $(this.divContent);
 		smilies.each(function(smile) {
 			var img1 = document.createElement('IMG');
 			img1.className = 'editor_smilie';
-			img1.setAttribute('src', '/images/smilies/'+smile);
-			img1.setAttribute('id','editor_smile_'+smile);
+			img1.setAttribute('src', '/images/smilies/'+smile[0]);
+			img1.setAttribute('id','editor_smile_'+smile[0]);
 			menuDiv.appendChild(img1);
 		});
 	}

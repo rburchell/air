@@ -229,7 +229,10 @@ chatChannel.prototype = {
 		this.key = key;
 	},
 
-	add: function(message) {
+	add: function(message, smilify) {
+		if (typeof smilify == 'undefined')
+			smilify = false;
+
 		if (chat.current != this.channel) {
 			$(this.divButton).setStyle({fontWeight : 'bold'});
 		}
@@ -239,7 +242,11 @@ chatChannel.prototype = {
 			}
 			this.messageCounter -= 10;
 		}
-		var parsedmessage = this.smilify(this.colorize(this.linkify(message)));
+		var parsedmessage = this.colorize(this.linkify(message));
+
+		// Only apply these if explicitly requested
+		if (smilify)
+			parsedmessage = this.smilify(parsedmessage);
 
 		// Also fix double spaces, we must do this AFTER url modifications etc.
 		var dbsp = /\s{2}/g;
