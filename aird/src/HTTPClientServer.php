@@ -83,9 +83,6 @@ class HTTPClientServer extends socketServerClient
 			$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
 			switch ($request['url']) {
 				case '/get':
-					$header  = "HTTP/{$request['version']} 200 OK\r\n";
-					$header .= "Cache-Control: no-cache, must-revalidate\r\n";
-					$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
 					// streaming iframe/comet communication (hanging get), don't send content-length!
 					$nickname               = isset($params['nickname']) ? $params['nickname'] : 'chabot';
 					$server = "208.68.93.158";
@@ -98,12 +95,18 @@ class HTTPClientServer extends socketServerClient
 					$client->nick           = $nickname;
 					$this->irc_client       = $client;
 					$this->streaming_client = true;
-					$output    = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n".
+					$header = "";
+					$header  = "HTTP/{$request['version']} 200 OK\r\n";
+					$header .= "Cache-Control: no-cache, must-revalidate\r\n";
+					$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
+					/*$output    = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n".
 								 "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n".
 								 "<head>\n".
 								 "<script type=\"text/javascript\">\nvar chat = window.parent.chat;\nchat.key = '{$this->key}';\nchat.connected = true;\n</script>\n".
 								 "</head>\n".
-								 "<body>\n";
+								 "<body>\n";*/
+				$output    =  "chat.key = '{$this->key}';\nthis.connected = true;\nalert(this.key)\n";
+
 					if (!empty($client->output)) {
 						$output .= $client->output;
 						$client->output = '';
@@ -232,6 +235,13 @@ class HTTPClientServer extends socketServerClient
 			$this->close();
 			$this->on_disconnect();
 		}
+	}
+
+	public function write($s, $l = 4444)
+	{
+//		if ($this->streaming_client)
+//			AirD::Log(AirD::LOGTYPE_HTTP, "Writing " . $s . " to client");
+		parent::write($s, $l);
 	}
 
 	public function on_write()

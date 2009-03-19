@@ -7,7 +7,6 @@ var chat = {
 	server       : '',
 	key          : false,
 	connection   : false,
-	iframeDiv    : false, // required for IE.
 	connected    : false,
 	timer        : false,
 	editor       : false,
@@ -16,6 +15,11 @@ var chat = {
 	listWindow   : false,
 	reconnectdelay : 0,
 
+	// XHR Variables for maintaining a persistant connection to the server.
+	xhReq        : false,
+	xhPollTimer  : false,
+	xhrNextParsePos     : 0,
+
 	initialize: function() {
 		$('new_channel').observe("mousedown", chat.showList);
 		chat.editor = new chatEditor;
@@ -23,7 +27,7 @@ var chat = {
 		chat.channel('info').show();
 		chat.onResize();
 		chat.tryConnect();
-		chat.timer = setTimeout('chat.frameCheck()', 10000);
+//		chat.timer = setInterval('chat.frameCheck()', 10000);
 	},
 
 	getparam: function(name) {
@@ -47,7 +51,11 @@ var chat = {
 		chat.add("info", "Connecting to server...");
 		chat.nickname      =  this.getparam("nickname");
 		chat.server        = "127.0.0.1";
-		chat.initializeIframe();
+
+		this.xhReq = this.createXMLHttpRequest();
+		this.xhReq.open("GET", '/get?nickname=' + chat.nickname + '&server=' + chat.server, true);
+		this.xhReq.send(null);
+		this.xhPollTimer = setInterval('chat.pollForRead()', 500);
 	},
 
 	showList: function() {
@@ -94,7 +102,9 @@ var chat = {
 	},
 
 	message: function(msg) {
-		new Ajax.Request('/message?key='+chat.key+'&msg='+encodeURIComponent(msg)+'&channel='+encodeURIComponent(chat.current), { asynchronous : true, method : 'get'});
+		var sendXH = this.createXMLHttpRequest();
+		sendXH.open("GET", '/message?key=' + chat.key + '&msg=' + encodeURIComponent(msg) + '&channel='+ encodeURIComponent(chat.current), true);
+		sendXH.send(null);
 	},
 
 	onConnecting: function() {
@@ -311,7 +321,7 @@ var chat = {
 		var pageWidth     = (document.documentElement.clientWidth  || window.document.body.clientWidth);
 		var pageHeight    = (document.documentElement.clientHeight || window.document.body.clientHeight);
 		$('send').setStyle({        width : (pageWidth - 10)+'px'});
-		$('editor_edit').setStyle({ width : (pageWidth - 10)+'px'});
+		$('editor_input').setStyle({ width : (pageWidth - 10)+'px'});
 		$('menu_div').setStyle({    width : (pageWidth - 8)+'px'});
 		$('editor_menu').setStyle({ width : (pageWidth - 8)+'px'});
 		chat.channels.each(function(channel) {
@@ -320,33 +330,8 @@ var chat = {
 		window.scrollTo(0, 0);
 	},
 
-	initializeIframe: function() {
-//		if (navigator.appVersion.indexOf("MSIE") != -1) {
-//			// For IE browsers
-//			chat.connection = new ActiveXObject("htmlfile");
-//			chat.connection.open();
-//			chat.connection.write("<html>");
-//			chat.connection.write("<script>document.domain = '"+document.domain+"'");
-//			chat.connection.write("</html>");
-//			chat.connection.close();
-//			chat.iframeDiv = chat.connection.createElement("div");
-//			chat.connection.appendChild(chat.iframeDiv);
-//			chat.connection.parentWindow.chat = chat;
-//			chat.iframeDiv.innerHTML = "<iframe name='comet_iframe' id='comet_iframe' src='/get?nickname="+chat.nickname+"&server="+chat.server+"' onload='chat.frameDisconnected(); onerror='chat.frameDisconnected();'></iframe>";
-//		} else {
-			// For other browser (Firefox...)
-			chat.connection = document.createElement('iframe');
-			chat.connection.setAttribute('id', 'comet_iframe');
-			chat.connection.src = '/get?nickname=' + chat.nickname + '&server=' + chat.server;
-
-			chat.connection.onLoad = 'chat.frameDisconnected()';
-			chat.connection.onError = 'chat.frameDisconnected()';
-			document.body.appendChild(chat.connection);
-//		}
-
-	},
-
 	frameCheck: function() {
+		alert("polling");
 		if (chat.connected == false) 
 		{
 			// Add 500ms to the reconnect delay every time we are forced to reconnect, to gracefully not bombard the server with requests.
@@ -359,8 +344,6 @@ var chat = {
 				chat.reconnectdelay = 50000;
 			chat.frameDisconnected();
 		}
-
-		chat.timer = setTimeout('chat.frameCheck()', chat.reconnectdelay);
 	},
 
 	frameDisconnected: function() {
@@ -372,16 +355,61 @@ var chat = {
 		});
 		chat.connected = false;
 		chat.connection = false;
-		$('comet_iframe').remove();
 		chat.tryConnect();
 	},
 
-	onUnload: function() {
-		if (chat.connection) {
-			// release the iframe or htmlfile object, prevents bugs on reloading in IE
-			chat.connection = false;
+	// Trialling a new non-iframe method.
+	createXMLHttpRequest: function()
+	{
+		try
+		{
+			return new ActiveXObject("Msxml2.XMLHTTP");
 		}
-	}
+		catch(e) {}
+		try
+		{
+			return new ActiveXObject("Microsoft.XMLHTTP");
+		}
+		catch(e) {}
+		try
+		{
+			return new XMLHttpRequest();
+		}
+		catch(e) {}
+		alert("XMLHttpRequest not supported");
+		return null;
+	},
+
+	pollForRead: function()
+	{
+		// XXX: It may be an optimisation to split this in onReadyStateChange.
+		var aLines = this.xhReq.responseText.split("\n");
+
+		while (this.xhrNextParsePos != aLines.length)
+		{
+			// This will happen constantly if there is nothing new to recieve
+			// This is *important* to keep,  as when a burst of text comes through, it would mark the empty line as evaluated already
+			// meaning it would skip the first line of the burst. Is there a better way to do this?
+			if (aLines[this.xhrNextParsePos].trim() == '')
+			{
+				break;
+			}
+
+			try
+			{
+				eval(aLines[this.xhrNextParsePos]);
+			}
+			catch (e)
+			{
+				// This can happen if a full JS line hasn't arrived yet.
+				chat.debug("EXCEPTION while parsing " + aLines[this.xhrNextParsePos]);
+				break;
+			}
+
+			
+			this.xhrNextParsePos++;
+		}
+	},
 }
 
 // Used in chatConnectionWindow, array.random(), returns a random element from the array

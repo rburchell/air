@@ -6,8 +6,8 @@ var chatEditorResizer = Class.create();
 chatEditorResizer.prototype = {
 	initialize: function() {
 		this.divSend        = $('send');
-		this.divEditor      = $('editor_div');
-		this.divEdit        = $('editor_edit');
+		this.divEditor      = $('editor_input');
+//		this.divEdit        = $('editor_edit');
 		this.divSizer       = $('editor_resizer');
 		this.eventMouseDown = this.initDrag.bindAsEventListener(this);
 		this.eventMouseMove = this.updateDrag.bindAsEventListener(this);
@@ -44,7 +44,7 @@ chatEditorResizer.prototype = {
 			channel.onResize();
 		});
 		this.divEditor.setStyle({ height : parseFloat(newHeight - 21) + 'px'});
-		this.divEdit.setStyle({   height : parseFloat(newHeight - 21) + 'px'});
+//		this.divEdit.setStyle({   height : parseFloat(newHeight - 21) + 'px'});
 	}
 }
 
@@ -59,7 +59,7 @@ chatEditor.prototype = {
 		this.ITALIC    = String.fromCharCode(4);
 		this.UNDERLINE = String.fromCharCode(31);
 		// and create html editor..
-		this.inputEditor = $('editor_edit').contentWindow.document.getElementById('editor_input');
+		this.inputEditor = $('editor_input');
 		this.createMenu();
 
 		// Command history holder.

@@ -31,6 +31,7 @@ class ircClient extends socketClient
 	public  $names = array();
 	public  $server;
 	public  $client_address;
+	private $script_sends;
 
 	/*** handle user commands ***/
 
@@ -70,8 +71,6 @@ class ircClient extends socketClient
 	{
 		$s = str_replace("\\", "\\\\", $s);
 		$s = htmlentities($s, ENT_QUOTES, 'UTF-8');
-//		while (strpos($s, "  ") !== false)
-//			$s = str_replace("  ", "&nbsp;&nbsp;", $s);
 		return $s;
 	}
 
@@ -563,13 +562,13 @@ class ircClient extends socketClient
 	private function rpl_motdstart($from, $command, $to, $param)
 	{
 		$line = $this->escape($param);
-		$this->send_script("chat.onMotd('$line');");
+		$this->send_script("chat.onMotd('" . $this->escape($line) . "');");
 	}
 
 	private function rpl_motd($from, $command, $to, $param)
 	{
 		$line = $this->escape($param);
-		$this->send_script("chat.onMotd('$line');");
+		$this->send_script("chat.onMotd('" . $this->escape($line) . "');");
 	}
 
 	private function rpl_endofmotd($from, $command, $to, $param)
@@ -843,9 +842,10 @@ class ircClient extends socketClient
 
 	public function send_script($msg)
 	{
-		AirD::Log(AirD::LOGTYPE_JAVASCRIPT, "Sending to " . $this->key . ": " . $msg);
+		AirD::Log(AirD::LOGTYPE_JAVASCRIPT, "Sending script nr " . $this->script_sends++ . " to " . $this->key . ": " . $msg);
 		// CLIENT COUNT SHOULD NOT BE HERE.
-		$this->oHTTPClient->write("<script type=\"text/javascript\">\n$msg\nchat.onSetNumberOfUsers(" . count(AirD::$aIRCClients) . ")\n</script>\n");
+		$this->oHTTPClient->write($msg. ";\n");
+				//chat.onSetNumberOfUsers(" . count(AirD::$aIRCClients) . ");\n");
 	}
 
 	public function on_connect()
