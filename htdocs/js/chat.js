@@ -53,6 +53,26 @@ var chat = {
 		chat.server        = "127.0.0.1";
 
 		this.xhReq = this.createXMLHttpRequest();
+		this.xhReq.onreadystatechange = function()
+		{
+			if (this.readyState != 4)
+				return;
+
+			// Reset XHR parse position, otherwise nothing will work when we reconnect.
+			this.xhrNextParsePos = 0;
+			
+			// Add 500ms to the reconnect delay every time we are forced to reconnect, to not bombard the server with requests.
+			chat.reconnectdelay += 500;
+
+			// Don't stop an instant reconnect attempt, but if that fails, minimum wait is 5 seconds to stop server hammering.
+			if (chat.reconnectdelay > 0 && chat.reconnectdelay < 5000)
+				chat.reconnectdelay = 5000;
+			else if (chat.reconnectdelay > 50000) // Also cap at 50 seconds.
+				chat.reconnectdelay = 50000;
+
+			chat.add("info", "Disconnected from server (HTTP status " + this.status + "). Reconnecting in " + (chat.reconnectdelay / 1000) + " seconds.");
+			setTimeout('chat.frameDisconnected()', chat.reconnectdelay);
+		}
 		this.xhReq.open("GET", '/get?nickname=' + chat.nickname + '&server=' + chat.server, true);
 		this.xhReq.send(null);
 		this.xhPollTimer = setInterval('chat.pollForRead()', 500);
@@ -330,24 +350,7 @@ var chat = {
 		window.scrollTo(0, 0);
 	},
 
-	frameCheck: function() {
-		alert("polling");
-		if (chat.connected == false) 
-		{
-			// Add 500ms to the reconnect delay every time we are forced to reconnect, to gracefully not bombard the server with requests.
-			chat.reconnectdelay += 500;
-
-			// Don't stop an instant reconnect attempt, but if that fails, minimum wait is 5 seconds to stop server hammering.
-			if (chat.reconnectdelay > 0 && chat.reconnectdelay < 5000)
-				chat.reconnectdelay = 5000;
-			else if (chat.reconnectdelay > 50000) // Also cap at 50 seconds.
-				chat.reconnectdelay = 50000;
-			chat.frameDisconnected();
-		}
-	},
-
 	frameDisconnected: function() {
-		chat.add("info", "Disconnected. Reconnecting in " + (chat.reconnectdelay / 1000) + " seconds.");
 		$A(chat.channels).each(function(channel) {
 			if (channel.channel != 'info') {
 				channel.destroy();
