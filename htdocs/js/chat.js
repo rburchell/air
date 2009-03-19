@@ -155,13 +155,13 @@ var chat = {
 	},
 
 	onMessage: function(from, channel, msg) {
-		chat.add(channel, '<div class="from">'+from+':</div> <span class="message">'+msg+'</span>');
+		chat.add(channel, '<div class="from">'+from+':</div> <span class="message">'+msg+'</span>', true);
 	},
 
 	onNotice: function(from, msg) {
 		chat.add('info', '<span class="notice">Notice from '+from+': '+msg+'</span>');
 		if (chat.current != 'info') {
-			chat.add(chat.current, '<span class="notice">Notice from '+from+': '+msg+'</span>');
+			chat.add(chat.current, '<span class="notice">Notice from '+from+': '+msg+'</span>', true);
 		}
 	},
 
@@ -174,18 +174,18 @@ var chat = {
 	},
 
 	onAction: function(channel, from, msg) {
-		chat.add(channel, '<span class="notice">'+from+' <span class="message">'+msg+'</span></span>')
+		chat.add(channel, '<span class="notice">'+from+' <span class="message">'+msg+'</span></span>', true)
 	},
 
 	onPrivateMessage: function(from, msg) {
 		chat.add('info', '<span class="privmsg">Message from '+from+': <span class="message">'+msg+'</span></span>')
 		if (chat.current != 'info') {
-			chat.add(chat.current, '<span class="privmsg">Message from '+from+': <span class="message">'+msg+'</span></span>')
+			chat.add(chat.current, '<span class="privmsg">Message from '+from+': <span class="message">'+msg+'</span></span>', true)
 		}
 	},
 
 	onServerNotice: function(notice) {
-		chat.add('info', '<span class="notice">Server notice: '+notice+'</span>');
+		chat.add('info', '<span class="notice">Server notice: '+notice+'</span>', true);
 	},
 
 	onKick: function(channel, from, who, reason) {
@@ -194,14 +194,14 @@ var chat = {
 			chat.channel(channel).members.render();
 		}
 		var reason = (reason != undefined && reason != '') ? ' ('+reason+')' : '';
-		chat.add(channel, '<span class="kick">'+from+' kicked '+who+' from '+channel+reason+'</span>');
+		chat.add(channel, '<span class="kick">'+from+' kicked '+who+' from '+channel+reason+'</span>', true);
 
 	},
 
 	onKicked: function(channel, from, who, reason) {
 		chat.removeChannel(channel);
 		var reason = (reason != undefined && reason != '') ? ' ('+reason+')' : '';
-		chat.add('info',  '<span class="kick">You were kicked from '+channel+' by '+from+reason+'</span>');
+		chat.add('info',  '<span class="kick">You were kicked from '+channel+' by '+from+reason+'</span>', true);
 	},
 
 	onError: function(error) {
@@ -234,7 +234,6 @@ var chat = {
 
 	onJoined: function(channel) {
 		chat.addChannel(channel);
-		chat.add(channel, '<span class="join">Entered '+channel+'</span>');
 		if (chat.channel(channel) != undefined) {
 			chat.channel(channel).show();
 		}

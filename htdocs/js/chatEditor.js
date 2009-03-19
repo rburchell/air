@@ -126,7 +126,7 @@ chatEditor.prototype = {
 
 	send: function() {
 		// Remove returns and translate WYSIWYG html code to mIRC compatible control codes (see chatChannel.js colorize function for the recieving end)
-//		var msg = this.translateTags(this.doc.body.innerHTML.toString().replace(/<br \/>/g,"\n").replace(/<br>/g,"\n").replace(/&nbsp;/g,' '));
+	//	var msg = this.translateTags(this.inputEditor.value);
 		var msg = this.inputEditor.value;
 		var msgs = msg.split("\n");
 		msgs.each(function(msg) {
@@ -290,7 +290,25 @@ chatEditor.prototype = {
 		var textbeforepos = text.substring(0,pos);
 		var textafterpos = text.substring(pos,text.length);
 		this.inputEditor.value = textbeforepos + newtext + textafterpos;
-		this.goToPos(textbeforepos.length + newtext.length)
+		this.changeCursorPos(textbeforepos.length + newtext.length)
+	},
+
+	changeCursorPos: function(newpos)
+	{
+		if(typeof this.inputEditor.selectionStart!="undefined")
+		{
+			this.inputEditor.setSelectionRange(newpos,newpos)
+		}
+		else
+		{
+			if(this.inputEditor.createTextRange)
+			{
+				var tmp=this.inputEditor.createTextRange();
+				tmp.move("character", newpos);
+				tmp.select()
+			}
+
+		}
 	},
 
 	/** Returns the position of the cursor in the inputbox.
@@ -342,27 +360,10 @@ chatEditor.prototype = {
 		}.bind(this));
 	},
 
-	execCommand: function(cmd, opt) {
-		var option = opt != undefined ? opt : false;
-		try {
-			this.doc.execCommand(cmd, false, option);
-		} catch(e) {
-			alert('Error executing command');
-		}
-	},
-
 	translateTags: function(str) {
-		//<span style="color: red;">
-		var code    = new RegExp('<span style="color: (.*?);">(.*?)<\/span>', 'igm');
-		var newStr  = str;
-		while (matches = code.exec(str)) {
-			if (matches != undefined && matches.length > 2) {
-				var toReplace = str.substring(matches.index, code.lastIndex);
-				var out       = String.fromCharCode(3)+this.getColor(matches[1].trim().toLowerCase())+matches[2]+String.fromCharCode(15);
-				newStr = newStr.replace(toReplace, out, 'igm');
-			}
-		}
-		str = newStr;
+		// XXX: We should probably make sure that the user has actually set a colour before appending colour codes..
+		if (str[0] != '/')
+			str = String.fromCharCode(4) + this.getColor(this.inputEditor.style) + str + String.fromCharCode(15);
 		var RegExpCode = [
 		['<(\/?)P>|</DIV>|&nbsp;',                                                                         ''],
 		['<STRONG>(.*?)<\/STRONG>',                                                                        this.BOLD + '$1' + this.END],
@@ -514,7 +515,40 @@ Object.extend(Object.extend(chatEditorPopup.prototype, chatEditorButton.prototyp
 	onSelect: function(event) {
 		var element = Event.element(event);
 		var option = this.command == 'smile' ? element.src : element.style.backgroundColor;
-		chat.editor.execCommand(this.command, option);
+		if (this.command == "smile")
+		{
+			var smilies = new Array();
+			smilies['biggrin.gif']			= ':D';
+			smilies['smile.gif']			= ':)';
+			smilies['sad.gif']			= ':(';
+			smilies['surprised.gif']		= ':o';
+			smilies['shock.gif']			= ':shock:';
+			smilies['confused.gif']			= ':?';
+			smilies['cool.gif']			= '8)';
+			smilies['lol.gif']			= ':lol:';
+			smilies['mad.gif']			= ':x';
+			smilies['razz.gif']			= ':p';
+			smilies['redface.gif']			= '::oops:';
+			smilies['cry.gif']			= ':cry:';
+			smilies['evil.gif']			= ':evil:';
+			smilies['badgrin.gif']			= ':badgrin:';
+			smilies['rolleyes.gif']			= ':roll:';
+			smilies['wink.gif']			= ';)';
+			smilies['exclaim.gif']			= ':!:';
+			smilies['question.gif']			= ':?:';
+			smilies['idea.gif']			= ':idea:';
+			smilies['arrow.gif']			= ':arrow:';
+			smilies['neutral.gif']			= ':|';
+			smilies['doubt.gif']			= ':doubt:';
+
+			// We need to do this replace magic because we determine smiley by filename.
+			// I'm *well* aware this is absolutely fugly, but it works.
+			chat.editor.insertText(chat.editor.getCursorPos(), smilies[element.src.replace(/^.*[\/\\]/g, '')]);
+		}
+		else
+		{
+			chat.editor.inputEditor.style.color = option;
+		}
 		this.hide();
 		chat.editor.focus();
 	}
@@ -539,7 +573,7 @@ Object.extend(Object.extend(chatColorPopup.prototype, chatEditorPopup.prototype)
 		'aqua',
 		'blue',
 		'fuchsia',
-		'gray'
+		'gray',
 		];
 		var menuDiv = $(this.divContent);
 		var cmd     = this.command;
@@ -558,35 +592,36 @@ chatSmiliePopup = Class.create();
 Object.extend(Object.extend(chatSmiliePopup.prototype, chatEditorPopup.prototype), {
 	populate: function() {
 		var smilies = [
-		'biggrin.gif',
-		'smile.gif',
-		'sad.gif',
-		'surprised.gif',
-		'shock.gif',
-		'confused.gif',
-		'cool.gif',
-		'lol.gif',
-		'mad.gif',
-		'razz.gif',
-		'redface.gif',
-		'cry.gif',
-		'evil.gif',
-		'badgrin.gif',
-		'rolleyes.gif',
-		'wink.gif',
-		'exclaim.gif',
-		'question.gif',
-		'idea.gif',
-		'arrow.gif',
-		'neutral.gif',
-		'doubt.gif'
+
+			['biggrin.gif', ':D'],
+			['smile.gif', ':)'],
+			['sad.gif', ':('],
+			['surprised.gif', ':o'],
+			['shock.gif', ':shock:'],
+			['confused.gif', ':?'],
+			['cool.gif', '8)'],
+			['lol.gif', ':lol:'],
+			['mad.gif', ':x'],
+			['razz.gif', ':p'],
+			['redface.gif', '::oops:'],
+			['cry.gif', ':cry:'],
+			['evil.gif', ':evil:'],
+			['badgrin.gif', ':badgrin:'],
+			['rolleyes.gif', ':roll:'],
+			['wink.gif', ';)'],
+			['exclaim.gif', ':!:'],
+			['question.gif', ':?:'],
+			['idea.gif', ':idea:'],
+			['arrow.gif', ':arrow:'],
+			['neutral.gif', ':|'],
+			['doubt.gif', ':doubt:']
 		];
 		menuDiv = $(this.divContent);
 		smilies.each(function(smile) {
 			var img1 = document.createElement('IMG');
 			img1.className = 'editor_smilie';
-			img1.setAttribute('src', '/images/smilies/'+smile);
-			img1.setAttribute('id','editor_smile_'+smile);
+			img1.setAttribute('src', '/images/smilies/'+smile[0]);
+			img1.setAttribute('id','editor_smile_'+smile[0]);
 			menuDiv.appendChild(img1);
 		});
 	}
