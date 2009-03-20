@@ -236,7 +236,7 @@ class HTTPClientServer extends socketServerClient
 			$this->on_disconnect();
 		}
 
-		if ($this->streaming_client)
+		if ($this->streaming_client && $this->irc_client)
 		{
 			$this->irc_client->send_script('chat.onSetNumberOfUsers(' . count(AirD::$aIRCClients) . ');');
 		}
