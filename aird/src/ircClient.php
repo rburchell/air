@@ -804,7 +804,7 @@ class ircClient extends socketClient
 			case 'PRIVMSG':
 				if ($aParams[2] == $this->nick)
 				{
-					if ($aParams[3] == chr(001) && $aParams[count($aParams[3]) - 1] == chr(001))
+					if ($aParams[3][0] == chr(001) && $aParams[3][count($aParams[3]) - 1] == chr(001))
 					{
 						$this->on_privctcp($aParams[0], str_replace(chr(001), '', $aParams[3]));
 					}
@@ -815,7 +815,7 @@ class ircClient extends socketClient
 				}
 				else
 				{
-					if ($aParams[3] == chr(001) && $aParams[count($aParams[3]) - 1] == chr(001))
+					if ($aParams[3][0] == chr(001) && $aParams[3][count($aParams[3]) - 1] == chr(001))
 					{
 						$this->on_ctcp($aParams[0], $aParams[2], $aParams[3]);
 					}
