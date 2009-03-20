@@ -84,7 +84,7 @@ class HTTPClientServer extends socketServerClient
 			switch ($request['url']) {
 				case '/get':
 					// streaming iframe/comet communication (hanging get), don't send content-length!
-					$nickname               = isset($params['nickname']) ? $params['nickname'] : 'chabot';
+					$nickname               = isset($params['nickname']) ? urldecode($params['nickname']) : 'chabot';
 					$server = "208.68.93.158";
 					$this->key              = md5("{$this->remote_address}:{$nickname}:{$server}".mt_rand());
 					AirD::Log(AirD::LOGTYPE_HTTP, "New connection from " . $this->remote_address . " to " . $server . " with nickname " . $nickname . " - unique key: " . $this->key);
