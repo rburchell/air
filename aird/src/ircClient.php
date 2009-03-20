@@ -845,7 +845,8 @@ class ircClient extends socketClient
 	{
 		AirD::Log(AirD::LOGTYPE_JAVASCRIPT, "Sending script nr " . $this->script_sends++ . " to " . $this->key . ": " . $msg);
 		// CLIENT COUNT SHOULD NOT BE HERE.
-		$this->oHTTPClient->write($msg. ";\n");
+		if ($this->oHTTPClient)
+			$this->oHTTPClient->write($msg. ";\n");
 				//chat.onSetNumberOfUsers(" . count(AirD::$aIRCClients) . ");\n");
 	}
 
