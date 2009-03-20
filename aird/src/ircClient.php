@@ -33,6 +33,19 @@ class ircClient extends socketClient
 	public  $client_address;
 	private $script_sends;
 
+	private $sListModes; // Modes that require a param to add/remove, and may have multiple entries stored (e.g. +beIg)
+	private $sParamModes; // Modes that require a param to add/remove (e.g. +Lfk)
+	private $sLazyParamModes; // Modes that require a param to add, none to remove (+l)
+	private $sNoParam; // Modes that don't take a parameter (+imnt)
+
+	/** Mode -> prefix lookup table.
+	  * e.g. o => @
+	  */
+	private $aPrefixModes;
+	/** Reverse mapping (@ -> o)
+	  */
+	private $aReversePrefixModes;
+
 	/*** handle user commands ***/
 
 
@@ -373,66 +386,80 @@ class ircClient extends socketClient
 		$this->send_script("chat.onNotice('$from','$msg');");
 	}
 
-	public function on_mode($from, $command, $to, $param)
+	public function on_mode($from, $command, $to, $aModes)
 	{
-		if (isset($this->channels[$to])) {
+		if (isset($this->channels[$to]))
+		{
+			AirD::Log(AirD::LOGTYPE_IRC, "Setting mode from " . $from . " with command " . $command . " to " . $to . " and modes " . implode(" ", $aModes));
 			$channel = $this->channels[$to];
-			$param   = trim(substr($param, strpos($param, 'MODE') + strlen('MODE') + strlen($to) + 2));
-			$param   = explode(' ', $param);
-			$mode    = array_shift($param);
+			$this->send_script("chat.onChannelMode('{$this->escape($to)}','" . $this->escape(implode(" ", $aModes)). "');");
+			$mode    = array_shift($aModes);
 			$modelen = strlen($mode);
-			$add = $remove = false;
-			for ($i = 0; $i < $modelen; $i++) {
-				switch($mode[$i]) {
+			$add = true;
+			for ($i = 0; $i < $modelen; $i++)
+			{
+				switch($mode[$i])
+				{
 					case '-':
-						$remove = true;
 						$add    = false;
 						break;
 					case '+':
 						$add    = true;
-						$remove = false;
-						break;
-					case 'o':
-						$nick = array_shift($param);
-						if ($add) {
-							$channel->op($nick, $from);
-						} elseif ($remove) {
-							$channel->deop($nick, $from);
-						}
-						break;
-					case 'v':
-						$nick = array_shift($param);
-						if ($add) {
-							$channel->voice($nick, $from);
-						} elseif ($remove) {
-							$channel->devoice($nick, $from);
-						}
-						break;
-					case 'k':
-						$key = array_shift($param);
-						if ($add) {
-							$channel->set_key($key, $from);
-						} elseif ($remove) {
-							$channel->set_key(false, $from);
-						}
 						break;
 					default:
-						if ($mode[$i] == 'b') {
-							$hostmask = array_shift($param);
-							if ($add) {
-								$channel->add_ban($hostmask, $from);
-							} elseif ($remove) {
-								$channel->remove_ban($hostmask, $from);
-							}
-						} else {
-							/*
-							if ($add) {
-								$channel->mode .= $mode[$i];
-							} elseif ($remove) {
-								$channel->mode = str_replace($mode[$i], '', $channel->mode);
-							}
-							*/
+						if (strpos($this->sListModes, $mode[$i]) !== false)
+						{
+							// It's a listmode! This means it requires a mask to set/unset, so do so.
+							$sParam = array_shift($aModes);
+							AirD::Log(AirD::LOGTYPE_IRC, "Setting listmode type " . $mode[$i] . " param is " . $sParam);
+							$add ? $channel->SetListMode($mode[$i], $sParam) : $channe->UnsetListMode($mode[$i], $sParam);
 						}
+						else if (strpos($this->sParamModes, $mode[$i]) !== false)
+						{
+							// It's a normal param mode, requires a param to set/unset.
+							$sParam = array_shift($aModes);
+							AirD::Log(AirD::LOGTYPE_IRC, "Setting param mode type " . $mode[$i] . " param is " . $sParam);
+							$add ? $channel->SetMode($mode[$i], $sParam) : $channel->UnsetMode($mode[$i], $sParam);
+						}
+						else if (strpos($this->sLazyParamModes, $mode[$i]) !== false)
+						{
+							// Lazy param mode: requires a param to set, none to unset.
+							$sParam = $add ? array_shift($aModes) : "";
+							AirD::Log(AirD::LOGTYPE_IRC, "Setting lazy param mode type " . $mode[$i] . " param is " . $sParam);
+							$add ? $channel->SetMode($mode[$i], $sParam) : $channel->UnsetMode($mode[$i]);
+						}
+						else if (strpos($this->sNoParam, $mode[$i]) !== false)
+						{
+							// Simple binary mode: doesn't take a parameter, ever.
+							AirD::Log(AirD::LOGTYPE_IRC, "Setting regular mode type " . $mode[$i]);
+							$add ? $channel->SetMode($mode[$i]) : $channel->UnsetMode($mode[$i]);
+						}
+						else
+						{
+							// Status mode. Unhandled at present.
+							$sParam = array_shift($aModes);
+							if (isset($this->aPrefixModes[$mode[$i]]))
+							{
+								AirD::Log(AirD::LOGTYPE_IRC, "Setting prefix mode type " . $mode[$i] . " param is " . $sParam);
+								$add ? $channel->SetPrefixMode($sParam, $this->aPrefixModes[$mode[$i]]) : $channel->UnsetPrefixMode($sParam, $this->aPrefixModes[$mode[$i]]);
+
+							}
+							else
+							{
+								AirD::Log(AirD::LOGTYPE_IRC, "Unknown mode - what shitty ircd is this? not handling: " . $mode[$i] . " param: " . $sParam);
+							}
+						}
+/*
+	private $sListModes; // Modes that require a param to add/remove, and may have multiple entries stored (e.g. +beIg)
+	private $sParamModes; // Modes that require a param to add/remove (e.g. +Lfk)
+	private $sLazyParamModes; // Modes that require a param to add, none to remove (+l)
+	private $sNoParam; // Modes that don't take a parameter (+imnt)
+
+	 Mode -> prefix lookup table.
+	  * e.g. o => @
+	 
+	private $aPrefixModes;
+	*/
 				}
 			}
 		}
@@ -496,300 +523,336 @@ class ircClient extends socketClient
 
 	/*** irc state functions ***/
 
-	private function rpl_welcome($from, $command, $to, $param)
+	private function rpl_welcome($aParams)
 	{
 		// reset our nickname, it might be truncated or changed by server
-		// and update server name, it might represent its self other then the dns name we used
-		$this->server = $from;
-		$this->on_nick($this->nick, $to);
-		$this->nick = $to;
+		$this->on_nick($this->nick, $aParams[2]);
+		$this->nick = $aParams[2];
 	}
 
-	private function rpl_yourhost($from, $command, $to, $param)
+	private function rpl_yourhost($aParams)
 	{
-		$this->send_script("chat.onServerInfo('your_host','" . $this->escape($param) . "');");
+		$this->send_script("chat.onServerInfo('your_host','" . $this->escape($aParams[3]) . "');");
 	}
 
-	private function rpl_created($from, $command, $to, $param)
+	private function rpl_created($aParams)
 	{
-		$this->send_script("chat.onServerInfo('created','" . $this->escape($param) . "');");
+		$this->send_script("chat.onServerInfo('created','" . $this->escape($aParams[3]) . "');");
 	}
 
-	private function rpl_myinfo($from, $command, $to, $param)
+	private function rpl_myinfo($aParams)
 	{
-		$this->send_script("chat.onServerInfo('my_info','" . $this->escape($param) . "');");
+		$this->send_script("chat.onServerInfo('my_info','" . $this->escape($aParams[3]) . "');");
 	}
 
-	private function rpl_bounce($from, $command, $to, $param)
+	private function rpl_isupport($aParams)
 	{
-		$this->send_script("chat.onServerInfo('bounce','" . $this->escape($param) . "');");
+		// XXX: Technically, this makes a lot of assumptions about IRCd behaviour. We should probably not do that.
+		$aTokens = array_slice($aParams, 3);
+		foreach ($aTokens as $sToken)
+		{
+			$aValues = explode("=", $sToken);
+
+			if ($aValues[0] == "CHANMODES")
+			{
+				// aValues[1] is like cat1,cat2,cat3,cat4 - so explode on ,.
+				$aModeTypes = explode(",", $aValues[1]);
+				$this->sListModes = $aModeTypes[0];
+				$this->sParamModes = $aModeTypes[1];
+				$this->sLazyParamModes = $aModeTypes[2];
+				$this->sNoParam = $aModeTypes[3];
+				AirD::Log(AirD::LOGTYPE_IRC, "Set modegroups to: " . $this->sListModes . " : " . $this->sParamModes . " : " . $this->sLazyParamModes . " : " . $this->sNoParam);
+			}
+			else if ($aValues[0] == "PREFIX")
+			{ 
+				// PREFIX is (unfortunately) a lot messier to parse.
+				// aValues[1] looks like (ov)@+, or (qaohv)~&@%+, et cetera.
+				// First, let's split the ( off.
+				$aValues[1] = substr($aValues[1], 1);
+
+				// Now, explode on ) in order to seperate modes from prefixes so we can do this in a simple loop.
+				$aPrefixModes = explode(")", $aValues[1]);
+
+				$i = 0;
+				while (isset($aPrefixModes[0][$i]) && isset($aPrefixModes[1][$i]))
+				{
+					// Lookup mode -> value.
+					$this->aPrefixModes[$aPrefixModes[0][$i]] = $aPrefixModes[1][$i];
+
+					// Set the reverse too for fast /names parsing
+					$this->aReversePrefixModes[$aPrefixModes[1][$i]] = $aPrefixModes[0][$i];
+					AirD::Log(AirD::LOGTYPE_IRC, "Added a prefix mode: " . $aPrefixModes[0][$i] . " value: " . $aPrefixModes[1][$i]);
+					$i++;
+				}
+			}
+		}
+		$this->send_script("chat.onServerInfo('ispport','" . $this->escape(" ", implode(array_slice($aParams, 3))) . "');");
 	}
 
-	private function rpl_uniqid($from, $command, $to, $param)
+	private function rpl_uniqid($aParams)
 	{
-		$this->send_script("chat.onServerInfo('uniq_id','" . $this->escape($param) . "');");
+		$this->send_script("chat.onServerInfo('uniq_id','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "');");
 	}
 
-	private function rpl_luserclient($from, $command, $to, $param)
+	private function rpl_luserclient($aParams)
 	{
-		$this->send_script("chat.onServerInfo('local_user_client','" . $this->escape($param) . "');");
+		$this->send_script("chat.onServerInfo('local_user_client','" . $this->escape($aParams[3]) . "');");
 	}
 
-	private function rpl_luserme($from, $command, $to, $param)
+	private function rpl_luserop($aParams)
 	{
-		$this->send_script("chat.onServerInfo('local_user_me','" . $this->escape($param) . "');");
+		$this->send_script("chat.onServerInfo('local_user_ops','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "');");
 	}
 
-	private function rpl_localusercount($from, $command, $to, $param)
+	private function rpl_luserme($aParams)
 	{
-		$this->send_script("chat.onServerInfo('local_user_count','" . $this->escape($param) . "');");
+		$this->send_script("chat.onServerInfo('local_user_me','" . $this->escape($aParams[3]) . "');");
 	}
 
-	private function rpl_globalusercount($from, $command, $to, $param)
+	private function rpl_localusercount($aParams)
 	{
-		$this->send_script("chat.onServerInfo('global_user_count','" . $this->escape($param) . "');");
+		$this->send_script("chat.onServerInfo('local_user_count','" . $this->escape($aParams[3]) . "');");
 	}
 
-	private function rpl_globalconnections($from, $command, $to, $param)
+	private function rpl_globalusercount($aParams)
 	{
-		$this->send_script("chat.onServerInfo('global_connections','" . $this->escape($param) . "');");
+		$this->send_script("chat.onServerInfo('global_user_count','" . $this->escape($aParams[3]) . "');");
 	}
 
-	private function rpl_luserchannels($from, $command, $to, $param)
+	private function rpl_globalconnections($aParams)
 	{
-		$this->send_script("chat.onServerInfo('channels_formed','" . $this->escape($param) . "');");
+		$this->send_script("chat.onServerInfo('global_connections','" . $this->escape($aParams[3]) . "');");
 	}
 
-	private function rpl_motdstart($from, $command, $to, $param)
+	private function rpl_luserchannels($aParams)
 	{
-		$line = $this->escape($param);
+		$this->send_script("chat.onServerInfo('channels_formed','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "');");
+	}
+
+	private function rpl_motdstart($aParams)
+	{
+		$line = $this->escape($aParams[3]);
 		$this->send_script("chat.onMotd('" . $line . "');");
 	}
 
-	private function rpl_motd($from, $command, $to, $param)
+	private function rpl_motd($aParams)
 	{
-		$line = $this->escape($param);
+		$line = $this->escape($aParams[3]);
 		$this->send_script("chat.onMotd('" . $line . "');");
 	}
 
-	private function rpl_endofmotd($from, $command, $to, $param)
+	private function rpl_endofmotd($aParams)
 	{
-		$line = $this->escape($param);
+		$line = $this->escape($aParams[3]);
 		$this->send_script("chat.onMotd('$line');");
 	}
 
-	private function rpl_namreply($from, $command, $to, $param)
+	private function rpl_namreply($aParams)
 	{
-		$channel = trim(substr($param, 2, strpos($param, ':') - 2));
-		$names   = explode(' ',substr($param, strpos($param, ':') + 1));
-		if (isset($this->channels[$channel])) $this->channels[$channel]->add_names($names);
-	}
+		if (isset($this->channels[$aParams[4]]))
+		{
+			$bParsingStatus = true;
 
-	private function rpl_endofnames($from, $command, $to, $param)
-	{
-		$channel = trim(substr($param, 0, strpos($param, ':')));
-		if (isset($this->channels[$channel])) $this->channels[$channel]->end_of_names();
-	}
+			$aNames = explode(" ",  $aParams[5]);
 
-	private function rpl_channelmodeis($from, $command, $to, $param)
-	{
-		$channel = trim(substr($param, 0, strpos($param,' ')));
-		$mode    = trim(substr($param, strpos($param, ' ')));
-		if (isset($this->channels[$channel])) $this->channels[$channel]->on_mode($mode);
-	}
+			foreach ($aNames as $sName)
+			{
+				$iPrefixEnd = 0;
 
-	private function rpl_whoreply($from, $command, $to, $param)
-	{
-		$full_name = substr($param, strpos($param, ':') + 1);
-		$params    = explode(' ', $param);
-		foreach ($this->channels as $channel) {
-			$channel->who($params[1], $params[2], $params[3], $params[4], $full_name);
+				while (isset($this->aReversePrefixModes[$sName[$iPrefixEnd]]))
+					$iPrefixEnd++;
+
+				$sPrefix = substr($sName, 0, $iPrefixEnd);
+				$sNick = substr($sName, $iPrefixEnd);
+
+				AirD::Log(AirD::LOGTYPE_IRC, "NAMES: Got user " . $sPrefix . " : " . $sNick);
+				$this->channels[$aParams[4]]->AddMember($sNick, $sPrefix);
+			}
 		}
-		$ident     = $this->escape($params[1]);
-		$host      = $this->escape($params[2]);
-		$server    = $this->escape($params[3]);
-		$nick      = $this->escape($params[4]);
-		$full_name = $this->escape($full_name);
-		$this->send_script("chat.onWho('$nick','$ident','$host','$server','$full_name');");
 	}
 
-	private function rpl_endofwho($from, $command, $to, $param)
+	private function rpl_endofnames($aParams)
 	{
-		$channel = substr($param, 0, strpos($param, ' '));
+		$this->send_script("chat.renderMembers('{$this->escape($aParams[3])}');");
+	}
+
+	private function rpl_channelmodeis($aParams)
+	{
+		$this->send_script("chat.onChannelMode('{$this->escape($aParams[4])}','" . $this->escape(implode(" ", array_slice($aParams, 5))). "');");
+	}
+
+	private function rpl_whoreply($aParams)
+	{
+		foreach ($this->channels as $channel)
+		{
+			// ident host server nick full name
+			$channel->who($aParams[4], $aParams[5], $aParams[2], $aParams[2], $aParams[9]);
+		}
+
+		$this->send_script("chat.onWho('" . $this->escape($aParams[2]). "','" . $this->escape($aParams[4]). "','" . $this->escape($aParams[5]). "','" . $this->escape($aParams[6]). "','" . $this->escape($aParams[9]) . "');");
+	}
+
+	private function rpl_endofwho($aParams)
+	{
 		$this->send_script("chat.onEndOfWho();");
 	}
 
-	private function rpl_channelcreatetime($from, $command, $to, $param)
+	private function rpl_channelcreatetime($aParams)
 	{
-		$params = explode(' ', $param);
-		if (isset($this->channels[$params[0]])) $this->channels[$params[0]]->channel_created($params[1]);
+		if (isset($this->channels[$aParams[0]]))
+			$this->channels[$aParams[3]]->channel_created($aParams[4]);
 	}
 
-	private function rpl_topic($from, $command, $to, $param)
+	private function rpl_topic($aParams)
 	{
-		$topic   = trim(substr($param, strpos($param, ':') + 1));
-		$channel = trim(substr($param, 0, strpos($param, ':')));
-		$this->on_topic($channel, $topic);
+		$this->on_topic($aParams[3], $aParams[4]);
 	}
 
-	private function rpl_topicsetby($from, $command, $to, $param)
+	private function rpl_topicsetby($aParams)
 	{
-		$params = explode(' ', $param);
-		if (isset($this->channels[$params[0]])) $this->channels[$params[0]]->topic_set_by($params[1], $params[2]);
+		if (isset($this->channels[$aParams[3]]))
+			$this->channels[$aParams[3]]->topic_set_by($aParams[4], $aParams[5]);
 	}
 
-	private function rpl_notopic($from, $command, $to, $param)
+	private function rpl_notopic($aParams)
 	{
-		$channel = $this->escape(substr($param, 0, strpos($param, ':')));
-		$msg     = $this->escape(substr($param, strpos($param, ':') + 1));
-		$this->send_script("chat.onError('$channel: $msg');");
+		$this->send_script("chat.onError('" . $this->escape($aParams[3]) . ": " . $this->escape($aParams[4]) . "');");
 	}
 
-	private function rpl_whowasuser($from, $command, $to, $param)
+	private function rpl_whowasuser($aParams)
 	{
-		$param = $this->escape($param);
-		$this->send_script("chat.onWhowas('$param');");
+		$this->send_script("chat.onWhowas('" . $aParams[3] . "');");
 	}
 
-	private function rpl_whoisserver($from, $command, $to, $param)
+	private function rpl_whoisserver($aParams)
 	{
-		$param = $this->escape($param);
-		$this->send_script("chat.onWhois('$param');");
+		$this->send_script("chat.onWhois('" . $this.escape($aParams[4]) . "');");
 	}
 
-	private function rpl_endofwhowas($from, $command, $to, $param)
+	private function rpl_endofwhowas($aParams)
 	{
-		$param = $this->escape($param);
 		$this->send_script("chat.onWhowas('End of /WHOWAS');");
 	}
 
-	private function rpl_liststart($from, $command, $to, $param)
+	private function rpl_liststart($aParams)
 	{
 		$this->send_script("chat.showList(); chat.listWindow.start();");
 	}
 
-	private function rpl_list($from, $command, $to, $param)
+	private function rpl_list($aParams)
 	{
-		$param   = explode(' ',trim(substr($param, 0, strpos($param, ':'))));
-		$channel = $this->escape($param[0]);
-		$members = $this->escape($param[1]);
-		// , '$topic'
-		$this->send_script("chat.listWindow.add('$channel', '$members');");
+		// Topic will be in params[5].
+		$this->send_script("chat.listWindow.add('" . $this->escape($aParams[3]) . "', '" . $this->escape($aParams[4]). "');");
 	}
 
-	private function rpl_listend($from, $command, $to, $param)
+	private function rpl_listend($aParams)
 	{
 		$this->send_script("chat.listWindow.done();");
 	}
 
-	private function rpl_tryagain($from, $command, $to, $param)
+	private function err_cannotsendtochan($aParams)
 	{
-		$param = $this->escape($param);
-		$this->send_script("chat.onError('$param');");
+		$this->send_script("chat.onError('" . $this->escape($aParams[3]) . ": " . $this->aParams[4] . "');");
 	}
 
-	private function err_cannotsendtochan($from, $command, $to, $param)
-	{
-		$channel = $this->escape(substr($param, 0, strpos($param, ':')));
-		$msg     = $this->escape(substr($param, strpos($param, ':') + 1));
-		$this->send_script("chat.onError('$channel: $msg');");
-	}
-
-	private function err_nicknameinuse($from, $command, $to, $param)
+	private function err_nicknameinuse($aParams)
 	{
 		$this->nick .= "_";
-		$param = $this->escape($param);
-		$this->send_script("chat.onError('$param, trying $this->nick');");
+		$this->send_script("chat.onError('" . $this->escape($aParams[3]) . ", trying " .  $this->escape($this->nick) . "');");
 		$this->nick($this->nick);
 	}
 
-	private function err_generic($from, $command, $to, $param)
+	private function err_generic($aParams)
 	{
-		$param = $this->escape($param);
+		$param = $this->escape(implode(" ", array_slice($aParams, 3)));
 		$this->send_script("chat.onError('$param');");
 	}
 
 	/*** Internal communication functions ***/
 
-	private function handle_server_message($from, $command, $to, $param)
+	private function handle_server_message($aParams)
 	{
-		AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " processing server message from " . $from . " => " . $to . ": " . $command . " (" . $param. ")", true);
-		if (substr($param, 0, 1) == ':') {
-			$param = substr($param, 1);
-		}
-		if (is_numeric($command) && isset(IRCNumerics::$lookup[$command])) {
-			$function = strtolower(IRCNumerics::$lookup[$command]);
-			if (is_callable(array($this, $function))) {
-				$this->$function($from, $command, $to, $param);
-			} elseif (substr($function, 0, 4) == 'err_') {
-				$this->err_generic($from, $command, $to, $param);
-			} else {
-				$this->err_generic($from, $command, $to, $param);
-				AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented message " . $command);
+		if (is_numeric($aParams[1]) && isset(IRCNumerics::$lookup[$aParams[1]]))
+		{
+			$function = strtolower(IRCNumerics::$lookup[$aParams[1]]);
+
+			if (is_callable(array($this, $function)))
+			{
+				$this->$function($aParams);
 			}
-		} elseif ($command == 'NOTICE') {
-			$this->on_server_notice($param);
-		} elseif ($command == 'MODE') {
-			$this->on_mode($from, $command, $to, $param);
+			elseif (substr($function, 0, 4) == 'err_')
+			{
+				$this->err_generic($aParams);
+			}
+			else
+			{
+				$this->err_generic($aParams);
+				AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented message " . $aParams[1]);
+			}
+		} elseif ($aParams[1] == 'NOTICE') {
+			$this->on_server_notice($aParams[3]);
+		} elseif ($aParams[1] == 'MODE') {
+			$this->on_mode($aParams[0], $aParams[1], $aParams[2], array_slice($aParams, 3));
 		} else {
-			AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented message " . $command);
+			AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented message " . $aParams[1]);
 		}
 	}
 
-	private function handle_message($from, $command, $to, $param, $who)
+	private function handle_message($aParams)
 	{
-		if (substr($to,0,1) == ':') {
-			$to = substr($to,1);
-		}
-		if (strpos($from, '!') !== false) {
-			$from = substr($from, 0, strpos($from, '!'));
-		}
-		AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " processing message from " . $from . " => " . $to . ": " . $command . " (" . $param. ") - " . $who, true);
-		// IRC: Client 56e2407a1d19ca64e988283c505ae74e processing message from test => test2: NICK (test!robin@testnet.user NICK test2) - 
-		switch ($command) {
+		switch ($aParams[1]) {
 			case 'PRIVMSG':
-				if ($to == $this->nick) {
-					if (substr($param, 0, 1) == chr(001) && substr($param, strlen($param) - 1, 1) == chr(001)) {
-						$this->on_privctcp($from, str_replace(chr(001), '', $param));
-					} else {
-						$this->on_privmsg($from, $param);
+				if ($aParams[2] == $this->nick)
+				{
+					if ($aParams[3] == chr(001) && $aParams[count($aParams[3]) - 1] == chr(001))
+					{
+						$this->on_privctcp($aParams[0], str_replace(chr(001), '', $aParams[3]));
 					}
-				} else {
-					if (substr($param, 0, 1) == chr(001) && substr($param, strlen($param) - 1, 1) == chr(001)) {
-						$this->on_ctcp($from, $to, $param);
-					} else {
-						$this->on_msg($from, $to, $param);
+					else
+					{
+						$this->on_privmsg($aParams[0], $aParams[3]);
+					}
+				}
+				else
+				{
+					if ($aParams[3] == chr(001) && $aParams[count($aParams[3]) - 1] == chr(001))
+					{
+						$this->on_ctcp($aParams[0], $aParams[2], $aParams[3]);
+					}
+					else
+					{
+						$this->on_msg($aParams[0], $aParams[2], $aParams[3]);
 					}
 				}
 				break;
 			case 'NOTICE':
-				$this->on_notice($from, $param);
+				$this->on_notice($aParams[0], $aParams[3]);
 				break;
 			case 'KICK':
-				$this->on_kick($to, $from, $who, $param);
+				$this->on_kick($aParams[2], $aParams[0], $aParams[3], $aParams[4]);
 				break;
 			case 'QUIT':
-				$this->on_quit($from);
+				$this->on_quit($aParams[0]);
 				break;
 			case 'PART':
-				$this->on_part($from, $to, $param);
+				$this->on_part($aParams[0], $aParams[2], $aParams[3]);
 				break;
 			case 'JOIN':
-				if ($from == $this->nick) {
-					$this->on_joined($param);
-					$this->get_mode($to);
+				if ($aParams[0] == $this->nick) {
+					$this->on_joined($aParams[2]);
+					$this->get_mode($aParams[2]);
 				} else {
-					$this->on_join($from, $to);
+					$this->on_join($aParams[0], $aParams[2]);
 				}
 				break;
 			case 'TOPIC':
-				$this->on_topic($to, $param);
+				$this->on_topic($aParams[2], $aParams[3]);
 				break;
 			case 'MODE':
-				$this->on_mode($from, $command, $to, $param);
+				$this->on_mode($aParams[0], $aParams[1], $aParams[2], array_slice($aParams, 3));
 				break;
 			case 'NICK':
-				$this->on_nick($from, $to);
+				$this->on_nick($aParams[0], $aParams[2]);
 				break;
 			default:
 				if (is_numeric($command) && isset(IRCNumerics::$lookup[$command])) {
@@ -810,22 +873,27 @@ class ircClient extends socketClient
 
 	private function on_readln($string)
 	{
-		if (substr($string, 0, 1) == ':') {
-			$string = substr($string, 1);
-			$match  = explode(' ', $string);
-			$from   = $match[0];
-			if (!$this->server) {
-				$this->server = $from;
+		if (substr($string, 0, 1) == ':')
+		{
+			$aParse = Utils::ParseLine($string);
+			if (!$this->server)
+			{
+				// XXX: this could be handled better by setting in RPL_WELCOME
+				$this->server = $aParse[0];
 			}
-			if ($from == $this->server) {
-				$pos = strlen($match[0]) + strlen($match[1]) + strlen($match[2]) + 3;
-				$this->handle_server_message($from, $match[1], $match[2], trim(substr($string, $pos)));
-			} else {
-				if (strpos($string, ':') !== false) {
-					$string   = substr($string, strpos($string, ':') + 1);
-				}
-				$who = isset($match[3]) ? $match[3] : '';
-				$this->handle_message($from, $match[1], $match[2], $string, $who);
+
+			if ($aParse[0] == $this->server)
+			{
+				AirD::Log(AirD::LOGTYPE_IRC, "handle_server_message: " . implode(" ", $aParse), true);
+				$this->handle_server_message($aParse);
+			}
+			else
+			{
+				// XXX: Strip user@host, this is a bit meh, we may want to not do this in the future.
+				$aFrom = explode("!", $aParse[0]);
+				$aParse[0] = $aFrom[0];
+				AirD::Log(AirD::LOGTYPE_IRC, "handle_message: " . implode(" ", $aParse), true);
+				$this->handle_message($aParse);
 			}
 		} elseif (substr($string,0,6) == 'NOTICE') {
 			$notice = substr($string, strpos($string, ' ') + 1);

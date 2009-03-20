@@ -275,59 +275,20 @@ var chat = {
 		chat.add(channel, '<span class="notice">channel mode set to '+mode+'</span>')
 	},
 
-	addMember: function(channel, who, operator, voice) {
+	addMember: function(channel, who, prefixes) {
 		if (chat.channel(channel) != undefined) {
-			chat.channel(channel).members.add(who, operator, voice);
+			chat.channel(channel).members.add(who, prefixes);
 		}
 	},
 
-	opMember: function(channel, who, from) {
-		if (chat.channel(channel) != undefined) {
-			chat.add(channel, '<span class="notice">'+from+' gives operator status to '+who+'</span>')
-			chat.channel(channel).members.op(who, from);
-		}
+	setPrefix: function(channel, who, prefix)
+	{
+		chat.channel(channel).members.setPrefix(channel, who, prefix);
 	},
 
-	deopMember: function(channel, who, from) {
-		if (chat.channel(channel) != undefined) {
-			chat.add(channel, '<span class="notice">'+from+' removes operator status from '+who+'</span>')
-			chat.channel(channel).members.deop(who, from);
-		}
-	},
-
-	voiceMember: function(channel, who, from) {
-		if (chat.channel(channel) != undefined) {
-			chat.add(channel, '<span class="notice">'+from+' gives voice to '+who+'</span>')
-			chat.channel(channel).members.voice(who, from);
-		}
-	},
-
-	devoiceMember: function(channel, who, from) {
-		if (chat.channel(channel) != undefined) {
-			chat.add(channel, '<span class="notice">'+from+' removes voice from '+who+'</span>')
-			chat.channel(channel).members.devoice(who, from);
-		}
-	},
-
-	addBan: function(channel, mask, from) {
-		if (chat.channel(channel) != undefined) {
-			chat.add(channel, '<span class="notice">'+from+' bans: '+mask+'</span>')
-			chat.channel(channel).addBan(mask, from);
-		}
-	},
-
-	removeBan: function(channel, mask, from) {
-		if (chat.channel(channel) != undefined) {
-			chat.add(channel, '<span class="notice">'+from+' removes ban: '+mask+'</span>')
-			chat.channel(channel).removeBan(mask, from);
-		}
-	},
-
-	setKey: function(channel, key, from) {
-		if (chat.channel(channel) != undefined) {
-			chat.add(channel, '<span class="notice">'+from+' sets channel key to '+key+'</span>')
-			chat.channel(channel).setKey(key, from);
-		}
+	unSetPrefix: function(channel, who, prefix)
+	{
+		chat.channel(channel).members.unSetPrefix(channel, who, prefix);
 	},
 
 	renderMembers: function(channel) {
@@ -408,7 +369,6 @@ var chat = {
 				break;
 			}
 
-			
 			this.xhrNextParsePos++;
 		}
 	},

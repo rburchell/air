@@ -27,62 +27,40 @@ chatMembers.prototype = {
 
 	render: function() {
 		var sorted = this.members.sort();
-		var ops     = 0;
 		var length = sorted.length;
 		var operator = '';
 		var voice    = '';
 		var member   = false;
 		$(this.header).update(length+' members');
 		this.clear();
-		for (var i = 0 ; i < length ; i++) {
+		for (var i = 0 ; i < length ; i++)
+		{
 			member = sorted[i];
-			operator = member.operator != undefined && member.operator ? 'operator' : '';
-			if (operator == 'operator') {
-				ops ++;
-			}
-			voice = member.voice != undefined && member.voice ? 'voice' : '';
-			new Insertion.Bottom($(this.content), '<li class="member '+operator+voice+'" id="'+member.content+'">'+member.who+'</li>');
-		}
-		if (ops) {
-			$(this.header).update($(this.header).innerHTML + ', '+ops+' operator(s)');
+			prefixes = member.prefixes != undefined && member.prefixes ? member.prefixes : '';
+			// class 'memberoperator' and 'membervoice' are bleh. figure out a way to do this properly.
+			new Insertion.Bottom($(this.content), '<li class="member" id="'+member.content+'">'+member+'</li>');
 		}
 	},
 
-	add: function(who, operator, voice) {
-		if (this.indexOf(who) == -1) {
-			this.members.push({who : who, operator : operator, voice: voice, content : this.channel + '_member_' + who, toString : function() {return (this.operator ? ' @' : '')+(this.voice ? '+' : '')+this.who.toLowerCase()} });
-		}
+	add: function(who, prefixes) {
+		this.members.push({who : who, prefixes: prefixes, content : this.channel + '_member_' + who, toString : function() {return (this.prefixes+this.who)} });
 	},
 
 	remove: function(who) {
 		this.members.splice(this.indexOf(who), 1);
 	},
 
-	op: function(who, from) {
-		if (this.indexOf(who) != -1) {
-			this.members[this.indexOf(who)].operator = true;
-		}
+	setPrefix: function(channel, who, prefix)
+	{
+		this.members[this.indexOf(who)].prefixes += prefix;
 		this.render();
 	},
 
-	deop: function(who, from) {
-		if (this.indexOf(who) != -1) {
-			this.members[this.indexOf(who)].operator = false;
-		}
-		this.render();
-	},
+	unSetPrefix: function(channel, who, prefix)
+	{
+		var pfreg = new RegExp('\\' + prefix);
 
-	voice: function(who, from) {
-		if (this.indexOf(who) != -1) {
-			this.members[this.indexOf(who)].voice = true;
-		}
-		this.render();
-	},
-
-	devoice: function(who, from) {
-		if (this.indexOf(who) != -1) {
-			this.members[this.indexOf(who)].voice = false;
-		}
+		this.members[this.indexOf(who)].prefixes = this.members[this.indexOf(who)].prefixes.replace(pfreg, "");
 		this.render();
 	},
 
@@ -92,6 +70,8 @@ chatMembers.prototype = {
 			this.render();
 		}
 	},
+
+	
 
 	indexOf: function(who) {
 	    for (i = 0; i < this.members.length; i++) {

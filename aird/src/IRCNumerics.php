@@ -24,7 +24,7 @@ abstract class IRCNumerics
 	'002' => 'RPL_YOURHOST',
 	'003' => 'RPL_CREATED',
 	'004' => 'RPL_MYINFO',
-	'005' => 'RPL_BOUNCE',
+	'005' => 'RPL_ISUPPORT',
 	'042' => 'RPL_UNIQID',
 	'200' => 'RPL_TRACELINK',
 	'201' => 'RPL_TRACECONNECTING',

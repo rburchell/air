@@ -18,9 +18,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 class ircChannel {
-	private $mode;
-	private $key;
-	private $bans;
 	private $topic = '';
 	private $channel;
 	private $names;
@@ -28,6 +25,7 @@ class ircChannel {
 	private $created;
 	private $topic_set_by;
 	private $topic_created;
+	private $aModes;
 
 	public function __construct($parent, $channel)
 	{
@@ -79,13 +77,6 @@ class ircChannel {
 		}
 	}
 
-	public function on_mode($mode)
-	{
-		$this->mode = $mode;
-		$mode = $this->parent->escape($mode);
-		$this->parent->send_script("chat.onChannelMode('{$this->parent->escape($this->channel)}','$mode');");
-	}
-
 	public function on_nick($from, $to)
 	{
 		if (isset($this->names[$from])) {
@@ -108,39 +99,23 @@ class ircChannel {
 		}
 	}
 
-	public function add_names($names)
+	// Used seperately from JOIN because it involves prefixes.
+	public function AddMember($sUser, $sPrefixes)
 	{
-		foreach ($names as $name) {
-			$operator = $voice = 'false';
-			if (substr($name, 0, 1) == '@') {
-				$name = substr($name, 1);
-				$operator = 'true';
-			} elseif (substr($name, 0, 1) == '+') {
-				$name  = substr($name, 1);
-				$voice = 'true';
-			}
-			$this->names[$name] = array('nickname' => $name, 'operator' => $operator, 'voice' => $voice);
-			$name = $this->parent->escape($name);
-			$this->parent->send_script("chat.addMember('{$this->parent->escape($this->channel)}' ,'$name', $operator, $voice);");
-		}
+		$this->names[$sUser] = array("nickname" => $sUser, "prefixes" => $sPrefixes);
+		$this->parent->send_script("chat.addMember('" . $this->parent->escape($this->channel) . "', '" . $this->parent->escape($sUser) . "', '" . $this->parent->escape($sPrefixes) . "')");
 	}
 
 	public function who($ident, $host, $server, $nick, $full_name)
 	{
-		if (isset($this->names[$nick]) && !isset($this->names[$nick]['ident'])) {
-			$operator = isset($this->names[$nick]['operator']) ? $this->names[$nick]['operator'] : 'false';
-			$voice    = isset($this->names[$nick]['voice'])    ? $this->names[$nick]['voice']    : 'false';
-			$this->names[$nick] = array('nickname' => $nick, 'ident' => $ident, 'server' => $server, 'full_name' => $full_name, 'operator' => $operator, 'voice' => $voice);
+		if (isset($this->names[$nick]))
+		{
+			$this->names[$nick]['ident'] = $ident;
+			$this->names[$nick]['server'] = $server;
+			$this->names[$nick]['full_name'] = $full_name;
+			$this->names[$nick]['host'] = $host;
 		}
 	}
-
-	public function end_of_names()
-	{
-		$this->parent->send_script("chat.renderMembers('{$this->parent->escape($this->channel)}');");
-	}
-
-	public function end_of_who() {}
-
 
 	public function channel_created($timestamp)
 	{
@@ -153,69 +128,54 @@ class ircChannel {
 		$this->topic_set_by  = $who;
 	}
 
-	public function op($nick, $from)
+	/** Sets a non-listmode on this channel. Mode may either be boolean (on/off) or parameter (+k style).
+	  * @param cModeChar The mode character to set, e.g. 'i', 'k', etc.
+	  * @param vValue The value to associate with the mode, e.g. true, 'somekeyhere', etc.
+	  */
+	public function SetMode($cModeChar, $vValue = true)
 	{
-		if (isset($this->names[$nick])) {
-			$this->names[$nick]['operator'] = true;
-			$nick = $this->parent->escape($nick);
-			$from = $this->parent->escape($from);
-			$this->parent->send_script("chat.opMember('{$this->parent->escape($this->channel)}', '$nick', '$from');");
-		}
+		AirD::Log(AirD::LOGTYPE_IRC, "SetMode: " . $cModeChar . ": " . $vValue, true);
+		$this->aModes[$cModeChar] = $vValue;
 	}
 
-	public function deop($nick, $from)
+	/** Unsets a non-listmoode (boolean or parameter types) on a channel.
+	  * @param cModeChar The mode character to unset.
+	z  */
+	public function UnsetMode($cModeChar)
 	{
-		if (isset($this->names[$nick])) {
-			$this->names[$nick]['operator'] = false;
-			$nick = $this->parent->escape($nick);
-			$from = $this->parent->escape($from);
-			$this->parent->send_script("chat.deopMember('{$this->parent->escape($this->channel)}', '$nick', '$from');");
-		}
+		AirD::Log(AirD::LOGTYPE_IRC, "UnsetMode: " . $cModeChar, true);
+		unset($this->aModes[$cModeChar]);
 	}
 
-	public function voice($nick, $from)
+	/** Adds a listmode mask value to the given listmode type list for this channel.
+	  * @param cModeChar The mode character to set (e.g. 'b')
+	  * @param vValue The mask to set (e.g. 'w00t!sucks@donkey.nads)
+	  */
+	public function SetListMode($cModeChar, $sValue)
 	{
-		if (isset($this->names[$nick])) {
-			$this->names[$nick]['voice'] = true;
-			$nick = $this->parent->escape($nick);
-			$from = $this->parent->escape($from);
-			$this->parent->send_script("chat.voiceMember('{$this->parent->escape($this->channel)}', '$nick', '$from');");
-		}
+		AirD::Log(AirD::LOGTYPE_IRC, "SetListMode: " . $cModeChar . ": " . $sValue, true);
+		$this->aModes[$cModeChar][$sValue] = $sValue;
 	}
 
-	public function devoice($nick, $from)
+	/** Removes a given listmode mask from the channel.
+	  * @param cModeChar The mode character to unset ('b')
+	  * @param sValue The mask to remove (e.g. 'w00t!is@the.greatest).
+	  */
+	public function UnsetListMode($cModeChar, $sValue)
 	{
-		if (isset($this->names[$nick])) {
-			$this->names[$nick]['voice'] = false;
-			$nick = $this->parent->escape($nick);
-			$from = $this->parent->escape($from);
-			$this->parent->send_script("chat.devoiceMember('{$this->parent->escape($this->channel)}', '$nick', '$from');");
-		}
+		AirD::Log(AirD::LOGTYPE_IRC, "UnsetListMode: " . $cModeChar . ": " . $sValue, true);
+		unset($this->aModes[$cModeChar][$sValue]);
 	}
 
-	public function set_key($key = false, $from)
+	public function SetPrefixMode($sUser, $cPrefix)
 	{
-		$this->key = $key;
-		$key  = $this->parent->escape($key);
-		$from = $this->parent->escape($from);
-		$this->parent->send_script("chat.setKey('{$this->parent->escape($this->channel)}', '$key', '$from');");
+		$this->parent->send_script("chat.setPrefix('" . $this->parent->escape($this->channel) . "', '" . $this->parent->escape($sUser) . "', '" . $this->parent->escape($cPrefix) . "')");
+
 	}
 
-	public function add_ban($hostmask, $from)
+	public function UnsetPrefixMode($sUser, $cPrefix)
 	{
-		$this->bans[$hostmask] = $hostmask;
-		$from = $this->parent->escape($from);
-		$hostmask = $this->parent->escape($hostmask);
-		$this->parent->send_script("chat.addBan('{$this->parent->escape($this->channel)}', '$hostmask', '$from');");
-	}
+		$this->parent->send_script("chat.unSetPrefix('" . $this->parent->escape($this->channel) . "', '" . $this->parent->escape($sUser) . "', '" . $this->parent->escape($cPrefix) . "')");
 
-	public function remove_ban($hostmask, $from)
-	{
-		if (isset($this->bans[$hostmask])) {
-			unset($this->bans[$hostmask]);
-			$from = $this->parent->escape($from);
-			$hostmask = $this->parent->escape($hostmask);
-			$this->parent->send_script("chat.removeBan('{$this->parent->escape($this->channel)}', '$hostmask', '$from');");
-		}
 	}
 }

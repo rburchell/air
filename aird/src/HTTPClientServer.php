@@ -90,7 +90,6 @@ class HTTPClientServer extends socketServerClient
 					AirD::Log(AirD::LOGTYPE_HTTP, "New connection from " . $this->remote_address . " to " . $server . " with nickname " . $nickname . " - unique key: " . $this->key);
 					// created paired irc client
 					$client = new ircClient($this, $this->key, $server, 6667);
-					$client->server         = $server;
 					$client->client_address = $this->remote_address;
 					$client->nick           = $nickname;
 					$this->irc_client       = $client;
