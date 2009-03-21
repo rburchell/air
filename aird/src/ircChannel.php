@@ -100,10 +100,13 @@ class ircChannel {
 	}
 
 	// Used seperately from JOIN because it involves prefixes.
+	// NOTE: sPrefixes is assumed to be a slash delimited string.
 	public function AddMember($sUser, $sPrefixes)
 	{
+		for ($i = 0; $i < strlen($sPrefixes); $i++)
+			$sPStr = "\\" . $sPrefixes[$i];
 		$this->names[$sUser] = array("nickname" => $sUser, "prefixes" => $sPrefixes);
-		$this->parent->send_script("chat.addMember('" . $this->parent->escape($this->channel) . "', '" . $this->parent->escape($sUser) . "', '" . $this->parent->escape($sPrefixes) . "')");
+		$this->parent->send_script("chat.addMember('" . $this->parent->escape($this->channel) . "', '" . $this->parent->escape($sUser) . "', '" . $sPStr . "')");
 	}
 
 	public function who($ident, $host, $server, $nick, $full_name)
@@ -169,13 +172,13 @@ class ircChannel {
 
 	public function SetPrefixMode($sUser, $cPrefix)
 	{
-		$this->parent->send_script("chat.setPrefix('" . $this->parent->escape($this->channel) . "', '" . $this->parent->escape($sUser) . "', '" . $this->parent->escape($cPrefix) . "')");
+		$this->parent->send_script("chat.setPrefix('" . $this->parent->escape($this->channel) . "', '" . $this->parent->escape($sUser) . "', '\\" . $cPrefix . "')");
 
 	}
 
 	public function UnsetPrefixMode($sUser, $cPrefix)
 	{
-		$this->parent->send_script("chat.unSetPrefix('" . $this->parent->escape($this->channel) . "', '" . $this->parent->escape($sUser) . "', '" . $this->parent->escape($cPrefix) . "')");
+		$this->parent->send_script("chat.unSetPrefix('" . $this->parent->escape($this->channel) . "', '" . $this->parent->escape($sUser) . "', '\\" . $cPrefix . "')");
 
 	}
 }

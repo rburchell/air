@@ -25,8 +25,26 @@ chatMembers.prototype = {
 		$(this.content).update('');
 	},
 
-	render: function() {
-		var sorted = this.members.sort();
+	render: function()
+	{
+		var sorted = this.members.sort(
+				function(a, b)
+				{
+					var pfxcomp = a.prefixrank - b.prefixrank;
+					if (pfxcomp == 0)
+					{
+						// fall back to string sort
+						return a-b;
+					}
+					else if (pfxcomp > 0)
+					{
+						return -1;
+					}
+					else
+					{
+						return 1;
+					}
+				});
 		var length = sorted.length;
 		var operator = '';
 		var voice    = '';
@@ -43,7 +61,25 @@ chatMembers.prototype = {
 	},
 
 	add: function(who, prefixes) {
-		this.members.push({who : who, prefixes: prefixes, content : this.channel + '_member_' + who, toString : function() {return (this.prefixes+this.who)} });
+		var m = 
+		{
+			who: who,
+			prefixes: '',
+			prefixrank: 0,
+			content: this.channel + '_member_' + who,
+			toString: function()
+			{
+				return this.prefixes + this.who;
+			},
+		}
+		this.members.push(m);
+
+		// Use setPrefix to make sure numerical content is correctly set.
+		for (var pin = 0; pin < prefixes.length; pin++)
+		{
+			this.setPrefix(this.channel, who, prefixes[pin]);
+		}
+		//{who : who, prefixes: prefixes, content : this.channel + '_member_' + who, toString : function() {return (this.prefixes+this.who)} });
 	},
 
 	remove: function(who) {
@@ -52,15 +88,19 @@ chatMembers.prototype = {
 
 	setPrefix: function(channel, who, prefix)
 	{
+		var value = chat.currentPrefixes.length - chat.currentPrefixes.indexOf(prefix);
 		this.members[this.indexOf(who)].prefixes += prefix;
+		this.members[this.indexOf(who)].prefixrank += value;
 		this.render();
 	},
 
 	unSetPrefix: function(channel, who, prefix)
 	{
 		var pfreg = new RegExp('\\' + prefix);
+		var value = chat.currentPrefixes.length - chat.currentPrefixes.indexOf(prefix);
 
 		this.members[this.indexOf(who)].prefixes = this.members[this.indexOf(who)].prefixes.replace(pfreg, "");
+		this.members[this.indexOf(who)].prefixrank -= value;
 		this.render();
 	},
 

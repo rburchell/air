@@ -317,17 +317,17 @@ class ircClient extends socketClient
 			case 'ping':
 				$this->write("NOTICE $from :".chr(1)."PING $param".chr(1)."\r\n");
 				$from = $this->escape($from);
-				$this->send_script("chat.onCTCP('$from', 'PING');");
+				$this->send_script("chat.onCTCP('$from', 'PING')");
 				break;
 			case 'time':
 				$this->write("NOTICE $from :".chr(1).gmdate("D, d M Y H:i:s", time() + 900)." GMT".chr(1)."\r\n");
 				$from = $this->escape($from);
-				$this->send_script("chat.onCTCP('$from', 'TIME');");
+				$this->send_script("chat.onCTCP('$from', 'TIME')");
 				break;
 			case 'version':
 				$this->write("NOTICE $from :".chr(1)."Chat 0.1 prototype by Chris Chabot <chabotc@xs4all.nl>".chr(1)."\r\n");
 				$from = $this->escape($from);
-				$this->send_script("chat.onCTCP('$from', 'VERSION');");
+				$this->send_script("chat.onCTCP('$from', 'VERSION')");
 				break;
 		}
 	}
@@ -342,7 +342,7 @@ class ircClient extends socketClient
 				$from    = $this->escape($from);
 				$channel = $this->escape($channel);
 				$arg     = $this->escape($arg);
-				$this->send_script("chat.onAction('$channel', '$from', '$arg');");
+				$this->send_script("chat.onAction('$channel', '$from', '$arg')");
 				break;
 			default:
 				AirD::Log(AirD::LOGTYPE_IRC, "Unknown CTCP: " . $action . "\n", true);
@@ -366,7 +366,7 @@ class ircClient extends socketClient
 	{
 		$from = $this->escape($from);
 		$msg  = $this->escape($msg);
-		$this->send_script("chat.onPrivateMessage('$from','$msg');");
+		$this->send_script("chat.onPrivateMessage('$from','$msg')");
 
 	}
 
@@ -376,14 +376,14 @@ class ircClient extends socketClient
 		$channel = $this->escape($channel);
 		$msg  = $this->escape($msg);
 
-		$this->send_script("chat.onMessage('$from', '$channel', '$msg');");
+		$this->send_script("chat.onMessage('$from', '$channel', '$msg')");
 	}
 
 	public function on_notice($from, $msg)
 	{
 		$from = $this->escape($from);
 		$msg  = $this->escape($msg);
-		$this->send_script("chat.onNotice('$from','$msg');");
+		$this->send_script("chat.onNotice('$from','$msg')");
 	}
 
 	public function on_mode($from, $command, $to, $aModes)
@@ -392,7 +392,7 @@ class ircClient extends socketClient
 		{
 			AirD::Log(AirD::LOGTYPE_IRC, "Setting mode from " . $from . " with command " . $command . " to " . $to . " and modes " . implode(" ", $aModes));
 			$channel = $this->channels[$to];
-			$this->send_script("chat.onChannelMode('{$this->escape($to)}','" . $this->escape(implode(" ", $aModes)). "');");
+			$this->send_script("chat.onChannelMode('{$this->escape($to)}','" . $this->escape(implode(" ", $aModes)). "')");
 			$mode    = array_shift($aModes);
 			$modelen = strlen($mode);
 			$add = true;
@@ -436,7 +436,7 @@ class ircClient extends socketClient
 						}
 						else
 						{
-							// Status mode. Unhandled at present.
+							// Status mode.
 							$sParam = array_shift($aModes);
 							if (isset($this->aPrefixModes[$mode[$i]]))
 							{
@@ -449,17 +449,7 @@ class ircClient extends socketClient
 								AirD::Log(AirD::LOGTYPE_IRC, "Unknown mode - what shitty ircd is this? not handling: " . $mode[$i] . " param: " . $sParam);
 							}
 						}
-/*
-	private $sListModes; // Modes that require a param to add/remove, and may have multiple entries stored (e.g. +beIg)
-	private $sParamModes; // Modes that require a param to add/remove (e.g. +Lfk)
-	private $sLazyParamModes; // Modes that require a param to add, none to remove (+l)
-	private $sNoParam; // Modes that don't take a parameter (+imnt)
-
-	 Mode -> prefix lookup table.
-	  * e.g. o => @
-	 
-	private $aPrefixModes;
-	*/
+						break;
 				}
 			}
 		}
@@ -468,14 +458,14 @@ class ircClient extends socketClient
 	public function on_server_notice($notice)
 	{
 		$notice = $this->escape($notice);
-		$this->send_script("chat.onServerNotice('$notice');");
+		$this->send_script("chat.onServerNotice('$notice')");
 	}
 
 	public function on_error($error)
 	{
 		AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got error: " . $error);
 		$error = $this->escape($error);
-		$this->send_script("chat.onError('$error');");
+		$this->send_script("chat.onError('$error')");
 		$this->close();
 	}
 
@@ -489,7 +479,7 @@ class ircClient extends socketClient
 		if (isset($this->channels[$channel])) $this->channels[$channel]->on_part($who, $message);
 		if ($who == $this->nick) {
 			$channel = $this->escape($channel);
-			$this->send_script("chat.removeChannel('{$channel}');");
+			$this->send_script("chat.removeChannel('{$channel}')");
 			unset($this->channels[$channel]);
 		}
 	}
@@ -532,17 +522,17 @@ class ircClient extends socketClient
 
 	private function rpl_yourhost($aParams)
 	{
-		$this->send_script("chat.onServerInfo('your_host','" . $this->escape($aParams[3]) . "');");
+		$this->send_script("chat.onServerInfo('your_host','" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_created($aParams)
 	{
-		$this->send_script("chat.onServerInfo('created','" . $this->escape($aParams[3]) . "');");
+		$this->send_script("chat.onServerInfo('created','" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_myinfo($aParams)
 	{
-		$this->send_script("chat.onServerInfo('my_info','" . $this->escape($aParams[3]) . "');");
+		$this->send_script("chat.onServerInfo('my_info','" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_isupport($aParams)
@@ -584,67 +574,69 @@ class ircClient extends socketClient
 					AirD::Log(AirD::LOGTYPE_IRC, "Added a prefix mode: " . $aPrefixModes[0][$i] . " value: " . $aPrefixModes[1][$i]);
 					$i++;
 				}
+
+				$this->send_script("chat.onSetPrefixTypes('\\" . implode("\\", $this->aPrefixModes) . "')");
 			}
 		}
-		$this->send_script("chat.onServerInfo('ispport','" . $this->escape(" ", implode(array_slice($aParams, 3))) . "');");
+		$this->send_script("chat.onServerInfo('ispport','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "')");
 	}
 
 	private function rpl_uniqid($aParams)
 	{
-		$this->send_script("chat.onServerInfo('uniq_id','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "');");
+		$this->send_script("chat.onServerInfo('uniq_id','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "')");
 	}
 
 	private function rpl_luserclient($aParams)
 	{
-		$this->send_script("chat.onServerInfo('local_user_client','" . $this->escape($aParams[3]) . "');");
+		$this->send_script("chat.onServerInfo('local_user_client','" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_luserop($aParams)
 	{
-		$this->send_script("chat.onServerInfo('local_user_ops','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "');");
+		$this->send_script("chat.onServerInfo('local_user_ops','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "')");
 	}
 
 	private function rpl_luserme($aParams)
 	{
-		$this->send_script("chat.onServerInfo('local_user_me','" . $this->escape($aParams[3]) . "');");
+		$this->send_script("chat.onServerInfo('local_user_me','" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_localusercount($aParams)
 	{
-		$this->send_script("chat.onServerInfo('local_user_count','" . $this->escape($aParams[3]) . "');");
+		$this->send_script("chat.onServerInfo('local_user_count','" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_globalusercount($aParams)
 	{
-		$this->send_script("chat.onServerInfo('global_user_count','" . $this->escape($aParams[3]) . "');");
+		$this->send_script("chat.onServerInfo('global_user_count','" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_globalconnections($aParams)
 	{
-		$this->send_script("chat.onServerInfo('global_connections','" . $this->escape($aParams[3]) . "');");
+		$this->send_script("chat.onServerInfo('global_connections','" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_luserchannels($aParams)
 	{
-		$this->send_script("chat.onServerInfo('channels_formed','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "');");
+		$this->send_script("chat.onServerInfo('channels_formed','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "')");
 	}
 
 	private function rpl_motdstart($aParams)
 	{
 		$line = $this->escape($aParams[3]);
-		$this->send_script("chat.onMotd('" . $line . "');");
+		$this->send_script("chat.onMotd('" . $line . "')");
 	}
 
 	private function rpl_motd($aParams)
 	{
 		$line = $this->escape($aParams[3]);
-		$this->send_script("chat.onMotd('" . $line . "');");
+		$this->send_script("chat.onMotd('" . $line . "')");
 	}
 
 	private function rpl_endofmotd($aParams)
 	{
 		$line = $this->escape($aParams[3]);
-		$this->send_script("chat.onMotd('$line');");
+		$this->send_script("chat.onMotd('$line')");
 	}
 
 	private function rpl_namreply($aParams)
@@ -673,12 +665,12 @@ class ircClient extends socketClient
 
 	private function rpl_endofnames($aParams)
 	{
-		$this->send_script("chat.renderMembers('{$this->escape($aParams[3])}');");
+		$this->send_script("chat.renderMembers('{$this->escape($aParams[3])}')");
 	}
 
 	private function rpl_channelmodeis($aParams)
 	{
-		$this->send_script("chat.onChannelMode('{$this->escape($aParams[4])}','" . $this->escape(implode(" ", array_slice($aParams, 5))). "');");
+		$this->send_script("chat.onChannelMode('{$this->escape($aParams[4])}','" . $this->escape(implode(" ", array_slice($aParams, 5))). "')");
 	}
 
 	private function rpl_whoreply($aParams)
@@ -689,12 +681,12 @@ class ircClient extends socketClient
 			$channel->who($aParams[4], $aParams[5], $aParams[2], $aParams[2], $aParams[9]);
 		}
 
-		$this->send_script("chat.onWho('" . $this->escape($aParams[2]). "','" . $this->escape($aParams[4]). "','" . $this->escape($aParams[5]). "','" . $this->escape($aParams[6]). "','" . $this->escape($aParams[9]) . "');");
+		$this->send_script("chat.onWho('" . $this->escape($aParams[2]). "','" . $this->escape($aParams[4]). "','" . $this->escape($aParams[5]). "','" . $this->escape($aParams[6]). "','" . $this->escape($aParams[9]) . "')");
 	}
 
 	private function rpl_endofwho($aParams)
 	{
-		$this->send_script("chat.onEndOfWho();");
+		$this->send_script("chat.onEndOfWho()");
 	}
 
 	private function rpl_channelcreatetime($aParams)
@@ -716,56 +708,56 @@ class ircClient extends socketClient
 
 	private function rpl_notopic($aParams)
 	{
-		$this->send_script("chat.onError('" . $this->escape($aParams[3]) . ": " . $this->escape($aParams[4]) . "');");
+		$this->send_script("chat.onError('" . $this->escape($aParams[3]) . ": " . $this->escape($aParams[4]) . "')");
 	}
 
 	private function rpl_whowasuser($aParams)
 	{
-		$this->send_script("chat.onWhowas('" . $aParams[3] . "');");
+		$this->send_script("chat.onWhowas('" . $aParams[3] . "')");
 	}
 
 	private function rpl_whoisserver($aParams)
 	{
-		$this->send_script("chat.onWhois('" . $this.escape($aParams[4]) . "');");
+		$this->send_script("chat.onWhois('" . $this.escape($aParams[4]) . "')");
 	}
 
 	private function rpl_endofwhowas($aParams)
 	{
-		$this->send_script("chat.onWhowas('End of /WHOWAS');");
+		$this->send_script("chat.onWhowas('End of /WHOWAS')");
 	}
 
 	private function rpl_liststart($aParams)
 	{
-		$this->send_script("chat.showList(); chat.listWindow.start();");
+		$this->send_script("chat.showList(); chat.listWindow.start()");
 	}
 
 	private function rpl_list($aParams)
 	{
 		// Topic will be in params[5].
-		$this->send_script("chat.listWindow.add('" . $this->escape($aParams[3]) . "', '" . $this->escape($aParams[4]). "');");
+		$this->send_script("chat.listWindow.add('" . $this->escape($aParams[3]) . "', '" . $this->escape($aParams[4]). "')");
 	}
 
 	private function rpl_listend($aParams)
 	{
-		$this->send_script("chat.listWindow.done();");
+		$this->send_script("chat.listWindow.done()");
 	}
 
 	private function err_cannotsendtochan($aParams)
 	{
-		$this->send_script("chat.onError('" . $this->escape($aParams[3]) . ": " . $this->aParams[4] . "');");
+		$this->send_script("chat.onError('" . $this->escape($aParams[3]) . ": " . $this->aParams[4] . "')");
 	}
 
 	private function err_nicknameinuse($aParams)
 	{
 		$this->nick .= "_";
-		$this->send_script("chat.onError('" . $this->escape($aParams[3]) . ", trying " .  $this->escape($this->nick) . "');");
+		$this->send_script("chat.onError('" . $this->escape($aParams[3]) . ", trying " .  $this->escape($this->nick) . "')");
 		$this->nick($this->nick);
 	}
 
 	private function err_generic($aParams)
 	{
 		$param = $this->escape(implode(" ", array_slice($aParams, 3)));
-		$this->send_script("chat.onError('$param');");
+		$this->send_script("chat.onError('$param')");
 	}
 
 	/*** Internal communication functions ***/
@@ -920,7 +912,7 @@ class ircClient extends socketClient
 
 	public function on_connect()
 	{
-		$this->send_script("chat.onSetGUIVersion('" . AirD::VERSION_STRING . "');chat.onConnecting();");
+		$this->send_script("chat.onSetGUIVersion('" . AirD::VERSION_STRING . "');chat.onConnecting()");
 		list($iOctet1, $iOctet2, $iOctet3, $iOctet4) = explode(".", $this->client_address, 4);
 		$iDecimal = ((((($iOctet1 * 256 + $iOctet2) * 256) + $iOctet3) * 256) + $iOctet4);
 		$sHex = dechex($iDecimal);

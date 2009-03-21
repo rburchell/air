@@ -2,7 +2,8 @@
 // Licenced under the GPLv2. For more info see http://www.chabotc.com
 
 /****************************** main chat application  ***********************************/
-var chat = {
+var chat =
+{
 	nickname     : '',
 	server       : '',
 	key          : false,
@@ -19,6 +20,8 @@ var chat = {
 	xhReq        : false,
 	xhPollTimer  : false,
 	xhrNextParsePos     : 0,
+
+	currentPrefixes : '',
 
 	initialize: function() {
 		$('new_channel').observe("mousedown", chat.showList);
@@ -319,6 +322,11 @@ var chat = {
 		chat.connected = false;
 		chat.connection = false;
 		chat.tryConnect();
+	},
+
+	onSetPrefixTypes: function(prefixes)
+	{
+		chat.currentPrefixes = prefixes;
 	},
 
 	// Trialling a new non-iframe method.
