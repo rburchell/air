@@ -3,11 +3,11 @@
 
 /****************************** chatEditor WYSIWYG input editor class  ***********************************/
 var chatEditorResizer = Class.create();
-chatEditorResizer.prototype = {
+chatEditorResizer.prototype =
+{
 	initialize: function() {
 		this.divSend        = $('send');
 		this.divEditor      = $('editor_input');
-//		this.divEdit        = $('editor_edit');
 		this.divSizer       = $('editor_resizer');
 		this.eventMouseDown = this.initDrag.bindAsEventListener(this);
 		this.eventMouseMove = this.updateDrag.bindAsEventListener(this);
@@ -44,7 +44,6 @@ chatEditorResizer.prototype = {
 			channel.onResize();
 		});
 		this.divEditor.setStyle({ height : parseFloat(newHeight - 21) + 'px'});
-//		this.divEdit.setStyle({   height : parseFloat(newHeight - 21) + 'px'});
 	}
 }
 
@@ -100,13 +99,9 @@ chatEditor.prototype = {
 				case Event.KEY_DOWN:
 					var item = this.historyGetNext();
 					if (item != null)
-					{
 						this.inputEditor.value = item;
-					}
 					else
-					{
 						this.inputEditor.value = "";
-					}
 					Event.stop(event);
 					return;
 					break;
@@ -133,9 +128,8 @@ chatEditor.prototype = {
 			msg = msg.replace(/\n/g,'').replace(/\r/g,'');
 //			msg = decodeURI(msg);
 //			msg = msg.trim();
-			if (msg && msg != '') {
+			if (msg && msg != '')
 				chat.message(msg);
-			}
 		});
 
 		// Add this item to history.
@@ -159,20 +153,14 @@ chatEditor.prototype = {
 	 */
 	historyAddItem: function(item)
 	{
-		// Don't allow duplicate items -- just re-blank it
-		if (this.commandHistory[0] == item)
-		{
-			chat.debug("Not adding duplicate history item " + encodeURI(item));
-		}
-		else
+		// Don't allow duplicate items -- just ignore
+		if (this.commandHistory[0] != item)
 		{
 			// Don't allow indefinite growth
 			if (this.commandHistory.length > 100)
-			{
 				this.commandHistory.pop();
-			}
 
-			chat.debug("Added item to command history, now " + this.commandHistory.length + " items. Item added is: " + encodeURI(item));
+			//chat.debug("Added item to command history, now " + this.commandHistory.length + " items. Item added is: " + encodeURI(item));
 
 			// Add the item.
 			this.commandHistory.unshift(item);
@@ -192,7 +180,7 @@ chatEditor.prototype = {
 		if (this.historyPos > this.commandHistory.length - 1)
 			return null;
 
-		chat.debug("GetPrevious: Returning history item " + this.historyPos + " which is: " + this.commandHistory[this.historyPos]);
+		//chat.debug("GetPrevious: Returning history item " + this.historyPos + " which is: " + this.commandHistory[this.historyPos]);
 
 		this.historyPos++;
 		if (this.historyPos > this.commandHistory.length - 1)
@@ -211,7 +199,7 @@ chatEditor.prototype = {
 		if (this.historyPos == 0)
 			return null;
 
-		chat.debug("GetNext: Returning history item " + this.historyPos + " which is: " + this.commandHistory[this.historyPos]);
+		//chat.debug("GetNext: Returning history item " + this.historyPos + " which is: " + this.commandHistory[this.historyPos]);
 
 		this.historyPos--;
 		if (this.historyPos < 0)
@@ -242,6 +230,7 @@ chatEditor.prototype = {
 	doTabComplete: function()
 	{
 		var text = this.inputEditor.value;
+		//'  ch'
 
 		// Get the start of this word
 		var iStart = this.getCursorPos() - 1;
@@ -258,6 +247,8 @@ chatEditor.prototype = {
 				break;
 		}
 
+		//Cursor pos 4 start: 2 end: 4
+
 		// XXX: Eventually, we'll have three lists for tab completion:
 		// Recently used, global list, per-channel.
 		// Recently used will contain items that have been used recently (like /msg somefag hi).
@@ -265,23 +256,46 @@ chatEditor.prototype = {
 		// Per-channel will contain the nicklist.
 //		if (chat.current != "info"
 		var curchan = chat.channel(chat.current);
+		var matches = new Array();
 
 		for (var i = 0; i < chat.channel(chat.current).members.members.length; i++)
 		{
 			var m = chat.channel(chat.current).members.members[i];
-			chat.debug("Comparing against " + m.who);
+			//chat.debug("Comparing against " + m.who);
 
 			// 'm' is the channel member, we only want to compare iEnd - iStart characters of their nick, though.
 			if (m.who.substring(0, iEnd - iStart).toLowerCase() == text.substring(iStart, iEnd).toLowerCase())
 			{
+				// Insert this match into the matches array
 				chat.debug("MATCH! " + m.who);
-				// We now want to insert the *latter half* of this word into the input.
-				this.insertText(this.getCursorPos(), m.who.substring(iEnd, m.who.length));
-				break;
+				matches.unshift(m.who);
 			}
 		}
 
-		chat.debug("Got tab complete for word " + text.substring(iStart, iEnd));
+		// If there's a single match, just shove it in the input
+		if (matches.length == 1)
+			this.insertText(this.getCursorPos(), matches[0].substring(iEnd - iStart, matches[0].length));
+		else
+		{
+			// Otherwise, print all matches and wait for them to tab complete the rest of it.
+			var sMatches = "";
+
+			for (var i = 0; i < matches.length; i++)
+			{
+				sMatches += matches[i] + " ";
+
+				if (sMatches.length > 80)
+				{
+					chat.add(chat.current, "Matches: " + sMatches);
+					sMatches = "";
+				}
+			}
+
+			if (sMatches.length)
+				chat.add(chat.current, "Matches: " + sMatches);
+		}
+
+//		chat.debug("Got tab complete for word " + text.substring(iStart, iEnd));
 	},
 
 	insertText: function(pos, newtext)
