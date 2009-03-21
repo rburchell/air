@@ -577,6 +577,11 @@ class ircClient extends socketClient
 
 				$this->send_script("chat.onSetPrefixTypes('\\" . implode("\\", $this->aPrefixModes) . "')");
 			}
+			else if ($aValues[0] == "NAMESX")
+			{
+				// Multi-prefix support.
+				$this->write("PROTOCTL NAMESX\r\n");
+			}
 		}
 		$this->send_script("chat.onServerInfo('ispport','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "')");
 	}

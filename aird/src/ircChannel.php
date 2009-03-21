@@ -103,8 +103,9 @@ class ircChannel {
 	// NOTE: sPrefixes is assumed to be a slash delimited string.
 	public function AddMember($sUser, $sPrefixes)
 	{
+		$sPStr = "";
 		for ($i = 0; $i < strlen($sPrefixes); $i++)
-			$sPStr = "\\" . $sPrefixes[$i];
+			$sPStr .= "\\" . $sPrefixes[$i];
 		$this->names[$sUser] = array("nickname" => $sUser, "prefixes" => $sPrefixes);
 		$this->parent->send_script("chat.addMember('" . $this->parent->escape($this->channel) . "', '" . $this->parent->escape($sUser) . "', '" . $sPStr . "')");
 	}
