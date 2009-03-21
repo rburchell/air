@@ -74,13 +74,6 @@ class HTTPClientServer extends socketServerClient
 				$request['url'] = substr($request['url'], 0, strpos($request['url'], '?'));
 			}
 
-			// XXX: By outputting cache control and expires here, we are preventing clients from caching images -- this is not good.
-			// Granted, this isn't that big a problem under small load, but it won't scale.
-			$header  = "HTTP/{$request['version']} 200 OK\r\n";
-			$header .= "Accept-Ranges: bytes\r\n";
-			$header .= 'Last-Modified: '.gmdate('D, d M Y H:i:s T', time())."\r\n";
-			$header .= "Cache-Control: no-cache, must-revalidate\r\n";
-			$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
 			switch ($request['url']) {
 				case '/get':
 					// streaming iframe/comet communication (hanging get), don't send content-length!
@@ -128,38 +121,58 @@ class HTTPClientServer extends socketServerClient
 					$header .= "Content-Length: ".strlen($output)."\r\n";
 					break;
 				default:
+					//  [if-modified-since] => fri,  20 mar 2009 00:10:32 gmt
 					$request['url'] = str_replace('..', '', $request['url']);
 					$file = '../htdocs'.$request['url'];
-					if (file_exists($file) && is_file($file)) {
-						AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a file: " . $file,  true);
+					if (file_exists($file) && is_file($file))
+					{
+						$mtime = filemtime($file);
 
-						// Do basic mime type sniffing. Required for Chrome, and a good idea anyway.
-						$sContentType = "";
-						$aExt = explode(".", basename($file));
-						if (isset($aExt[1]))
+						if (isset($request['if-modified-since']) && strtotime($request['if-modified-since']) == $mtime)
 						{
-							switch (strtolower($aExt[1]))
-							{
-								case "css":
-									$sContentType = "text/css";
-									break;
-								case "js":
-									$sContentType = "text/javascript";
-									break;
-							}
+							// Previously requested data, just send 304
+							AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a CACHED file: " . $file,  true);
+							$header  = "HTTP/{$request['version']} 304 OK\r\n";
+							$output = "";
 						}
+						else
+						{
+							// Newly requested data, process request properly
+							AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a file: " . $file,  true);
 
-						// rewrite header
-						$header  = "HTTP/{$request['version']} 200 OK\r\n";
-						$header .= "Accept-Ranges: bytes\r\n";
-						$header .= 'Last-Modified: '.gmdate('D, d M Y H:i:s T', filemtime($file))."\r\n";
-						$size    = filesize($file);
-						$header .= "Content-Length: $size\r\n";
-						if (!empty($sContentType))
-							$header .= "Content-Type: " . $sContentType . "\r\n";
-						$output  = file_get_contents($file);
+							// Do basic mime type sniffing. Required for Chrome, and a good idea anyway.
+							$sContentType = "";
+							$aExt = explode(".", basename($file));
+							if (isset($aExt[1]))
+							{
+								switch (strtolower($aExt[1]))
+								{
+									case "css":
+										$sContentType = "text/css";
+										break;
+									case "js":
+										$sContentType = "text/javascript";
+										break;
+								}
+							}
+
+							// rewrite header
+							$header  = "HTTP/{$request['version']} 200 OK\r\n";
+							$header .= "Accept-Ranges: bytes\r\n";
+							$header .= 'Last-Modified: '.gmdate('D, d M Y H:i:s T', filemtime($file))."\r\n";
+							$size    = filesize($file);
+							$header .= "Content-Length: $size\r\n";
+							if (!empty($sContentType))
+								$header .= "Content-Type: " . $sContentType . "\r\n";
+							$output  = file_get_contents($file);
+						}
 					} else {
 						AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a NONEXISTANT file: " . $file,  true);
+						$header  = "HTTP/{$request['version']} 200 OK\r\n";
+						$header .= "Accept-Ranges: bytes\r\n";
+						$header .= 'Last-Modified: '.gmdate('D, d M Y H:i:s T', time())."\r\n";
+						$header .= "Cache-Control: no-cache, must-revalidate\r\n";
+						$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
 						$output  = "<h1>404: Document not found.</h1>Couldn't find $file";
 						$header  = "'HTTP/{$request['version']} 404 Not Found\r\n".
 						           "Content-Length: ".strlen($output)."\r\n";
