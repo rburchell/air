@@ -29,7 +29,7 @@ chatChannel.prototype = {
 		this.members            = new chatMembers(this.channel, this.ulWhoContent, this.divWhoTitle, this);
 		$(this.divMessagesHeader).update(this.channel+'<span id="'+this.divTopic+'"></span>');
 		var close = this.channel != 'info' ? '<div class="tab_close" id="'+this.divHeaderClose+'"></div>' : '';
-		new Insertion.Bottom('toolbar', '<div class="channel_button" id="'+this.divButton+'"><div class="tab_left"></div><div class="tab_center">'+close+this.channel+'</div><div class="tab_right"></div></div>');
+		new Insertion.Bottom('toolbar', '<div class="channel_button" id="'+this.divButton+'"><div class="tab_left"></div><div class="tab_center">'+close+this.channel+'&nbsp;</div><div class="tab_right"></div></div>');
 		$(this.divWhoSizer).onclick = this.collapseWho.bindAsEventListener(this);
 		$(this.divButton).onclick   = this.show.bindAsEventListener(this);
 		this.eventMouseDown = this.initDrag.bindAsEventListener(this);

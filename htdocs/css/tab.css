@@ -39,7 +39,6 @@
 
 .tab_center {
 	background			: url('/images/tab_sprite.gif') repeat-x left -50px;
-	width				: 114px;
 	height				: 22px;
 	padding-left		: 4px;
 	text-align			: left;
