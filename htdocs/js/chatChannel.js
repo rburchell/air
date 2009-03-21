@@ -8,8 +8,6 @@ chatChannel.prototype = {
 		this.closing            = false;
 		this.channel            = channel;
 		this.topic              = '';
-		this.key                = false;
-		this.bans               = [];
 		this.messageCounter     = 0;
 		this.divMain            = 'channel_'+this.channel;
 		this.divNames           = 'names_'+this.channel;
@@ -213,20 +211,6 @@ chatChannel.prototype = {
 		} else {
 			$(this.divTopic).update(': '+topic);
 		}
-	},
-
-	addBan: function(mask, from) {
-		this.bans.push(mask);
-	},
-
-	removeBan: function(mask, from) {
-		if (this.bans.indexOf(mask) != -1) {
-			this.bans.splice(this.bans.indexOf(mask), 1);
-		}
-	},
-
-	setKey: function(key, from) {
-		this.key = key;
 	},
 
 	add: function(message, smilify) {
