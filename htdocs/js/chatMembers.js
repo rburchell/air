@@ -34,7 +34,7 @@ chatMembers.prototype = {
 					if (pfxcomp == 0)
 					{
 						// fall back to string sort
-						return a-b;
+						return a.who.toLowerCase() > b.who.toLowerCase();
 					}
 					else if (pfxcomp > 0)
 					{
