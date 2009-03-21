@@ -90,7 +90,8 @@ chatMembers.prototype = {
 	{
 		var value = chat.currentPrefixes.length - chat.currentPrefixes.indexOf(prefix);
 		this.members[this.indexOf(who)].prefixes += prefix;
-		this.members[this.indexOf(who)].prefixrank += value;
+		// Multiply value by itself to get a better "weighted" total. This means that ~ and @% are different.
+		this.members[this.indexOf(who)].prefixrank += value * value;
 		this.render();
 	},
 
@@ -100,7 +101,7 @@ chatMembers.prototype = {
 		var value = chat.currentPrefixes.length - chat.currentPrefixes.indexOf(prefix);
 
 		this.members[this.indexOf(who)].prefixes = this.members[this.indexOf(who)].prefixes.replace(pfreg, "");
-		this.members[this.indexOf(who)].prefixrank -= value;
+		this.members[this.indexOf(who)].prefixrank -= value * value;
 		this.render();
 	},
 
