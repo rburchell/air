@@ -122,7 +122,9 @@ class HTTPClientServer extends socketServerClient
 					break;
 				default:
 					//  [if-modified-since] => fri,  20 mar 2009 00:10:32 gmt
-					$request['url'] = str_replace('..', '', $request['url']);
+					while (strpos("..", $request['url']) !== false)
+						$request['url'] = str_replace('..', '', $request['url']);
+
 					$file = '../htdocs'.$request['url'];
 					if (file_exists($file) && is_file($file))
 					{
