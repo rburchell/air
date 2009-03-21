@@ -826,13 +826,13 @@ class ircClient extends socketClient
 				$this->on_notice($aParams[0], $aParams[3]);
 				break;
 			case 'KICK':
-				$this->on_kick($aParams[2], $aParams[0], $aParams[3], $aParams[4]);
+				$this->on_kick($aParams[2], $aParams[0], $aParams[3], isset($aParams[4]) ? $aParams[4] : "");
 				break;
 			case 'QUIT':
 				$this->on_quit($aParams[0]);
 				break;
 			case 'PART':
-				$this->on_part($aParams[0], $aParams[2], $aParams[3]);
+				$this->on_part($aParams[0], $aParams[2], isset($aParams[3]) ? $aParams[3] : "");
 				break;
 			case 'JOIN':
 				if ($aParams[0] == $this->nick) {
