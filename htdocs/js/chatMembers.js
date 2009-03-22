@@ -54,9 +54,10 @@ chatMembers.prototype = {
 		for (var i = 0 ; i < length ; i++)
 		{
 			member = sorted[i];
+			var prefixcol = 255 - (member.prefixrank * 2);
 			prefixes = member.prefixes != undefined && member.prefixes ? member.prefixes : '';
 			// class 'memberoperator' and 'membervoice' are bleh. figure out a way to do this properly.
-			new Insertion.Bottom($(this.content), '<li class="member" id="'+member.content+'">'+member+'</li>');
+			new Insertion.Bottom($(this.content), '<li class="member" id="'+member.content+'" style="background-color: rgb(' + prefixcol + ', ' + prefixcol + ', ' + prefixcol + ')">'+member+'</li>');
 		}
 	},
 
