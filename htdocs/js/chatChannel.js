@@ -226,7 +226,15 @@ chatChannel.prototype = {
 			}
 			this.messageCounter -= 10;
 		}
-		var parsedmessage = this.colorize(this.linkify(message));
+/*
+   this is *miserably* broken.
+		var urlRegex = /\b(https?:\/\/\S+)/ig;
+			///\b(https?:\/\/[^\s+\"\<\>]+)/igm;
+		if (urlRegex.test(message)) {
+			return message.replace(urlRegex, "<a href=\"$1\" title=\"$1\" target=\"_blank\">$1</a>");
+		}
+*/
+		var parsedmessage = this.colorize(message);
 
 		// Only apply these if explicitly requested
 		if (smilify)
@@ -293,15 +301,6 @@ chatChannel.prototype = {
 		smiles.each(function(e) {
 			message = message.replace(e[1], '<img src="/images/smilies/'+e[0]+'" />', 'igm');
 		});
-		return message;
-	},
-
-	linkify: function(message) {
-		var urlRegex = /\b(https?:\/\/\S+)/ig;
-			///\b(https?:\/\/[^\s+\"\<\>]+)/igm;
-		if (urlRegex.test(message)) {
-			return message.replace(urlRegex, "<a href=\"$1\" title=\"$1\" target=\"_blank\">$1</a>");
-		}
 		return message;
 	},
 
