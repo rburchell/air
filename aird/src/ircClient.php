@@ -325,11 +325,11 @@ class ircClient extends socketClient
 				$from = $this->escape($from);
 				$this->send_script("chat.onCTCP('$from', 'TIME')");
 				break;
-			case 'version':
-				$this->write("NOTICE $from :".chr(1)."Chat 0.1 prototype by Chris Chabot <chabotc@xs4all.nl>".chr(1)."\r\n");
-				$from = $this->escape($from);
-				$this->send_script("chat.onCTCP('$from', 'VERSION')");
-				break;
+//			case 'version':
+//				$this->write("NOTICE $from :".chr(1)."BrowserChat (http://www.browserchat.net)".chr(1)."\r\n");
+//				$from = $this->escape($from);
+//				$this->send_script("chat.onCTCP('$from', 'VERSION')");
+//				break;
 		}
 	}
 
