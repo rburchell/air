@@ -121,6 +121,7 @@ class ircClient extends socketClient
 				} else {
 					$this->set_mode($who, $mode);
 				}
+				break;
 			case 'kick':
 				$who     = (strpos($param, ' ') !== false) ? trim(substr($param, 0, strpos($param, ' '))) : $param;
 				$reason  = (strpos($param, ' ') !== false) ? trim(substr($param, strpos($param, ' ')))    : '';
