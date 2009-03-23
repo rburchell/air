@@ -54,7 +54,7 @@ chatMembers.prototype = {
 		for (var i = 0 ; i < length ; i++)
 		{
 			member = sorted[i];
-			var prefixcol = 255 - (member.prefixrank * 2);
+			var prefixcol = Math.round(255 - (member.prefixrank * (119 / 55))); // 55 is max points,  119 is the darkest we want it to get
 			prefixes = member.prefixes != undefined && member.prefixes ? member.prefixes : '';
 			// class 'memberoperator' and 'membervoice' are bleh. figure out a way to do this properly.
 			new Insertion.Bottom($(this.content), '<li class="member" id="'+member.content+'" style="background-color: rgb(' + prefixcol + ', ' + prefixcol + ', ' + prefixcol + ')">'+member+'</li>');
