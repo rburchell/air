@@ -1,8 +1,6 @@
 .window {
 	opacity				: .85;
 	-moz-opacity		: .85;
-	filter				: alpha(opacity=80);
-	zoom				: 1;
 	clear    			: both;
 	background-color 	: #deecfd;
 	color    			: #083772;
@@ -16,8 +14,6 @@
 .window_handle {
 	opacity				: .85;
 	-moz-opacity		: .85;
-	filter				: alpha(opacity=80);
-	zoom				: 1;
 	height				: 26px;
 	line-height			: 26px;
 	color				: #083772;
@@ -28,8 +24,6 @@
 .window_handle .window_handle_center {
 	opacity				: .85;
 	-moz-opacity		: .85;
-	filter				: alpha(opacity=80);
-	zoom				: 1;
 	height				: 26px;
     background			: url('/images/dialog_sprite.gif') repeat-x 0px -82px;
     color				: #083772;
@@ -41,8 +35,6 @@
 .window_handle .window_handle_left {
 	opacity				: .85;
 	-moz-opacity		: .85;
-	filter				: alpha(opacity=80);
-	zoom				: 1;
 	float				: left;
 	height				: 26px;
     background			: url('/images/dialog_sprite.gif') no-repeat 0px -41px;
@@ -52,8 +44,6 @@
 .window_handle .window_handle_right {
 	opacity				: .85;
 	-moz-opacity		: .85;
-	filter				: alpha(opacity=80);
-	zoom				: 1;
 	float				: right;
 	height				: 26px;
     background			: url('/images/dialog_sprite.gif') no-repeat right 0px;
@@ -61,7 +51,6 @@
 }
 
 .window_close {
-	zoom				: 1;
 	float				: right;
 	cursor				: pointer;
 	margin-right		: 4px;
@@ -80,8 +69,6 @@
 	background-image	: url('/images/dialog_center.gif');
 	opacity				: .85;
 	-moz-opacity		: .85;
-	filter				: alpha(opacity=80);
-	zoom				: 1;
 	clear				: both;
 	background-color	: transparent;
 	overflow			: auto;
@@ -93,8 +80,6 @@
 .window_sizer {
 	opacity				: .85;
 	-moz-opacity		: .85;
-	filter				: alpha(opacity=80);
-	zoom				: 1;
 	position			: absolute;
 	bottom				: 0px;
 	right				: 0px;
@@ -110,8 +95,6 @@
 .window_title {
 	opacity				: 1;
 	-moz-opacity		: 1;
-	filter				: alpha(opacity=100);
-	zoom				: 1;
 	margin-left			: 4px;
 	font-weight			: bold;
 	color				: #15428B;
