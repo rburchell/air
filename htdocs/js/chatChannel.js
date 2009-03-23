@@ -226,14 +226,13 @@ chatChannel.prototype = {
 			}
 			this.messageCounter -= 10;
 		}
-/*
-   this is *miserably* broken.
-		var urlRegex = /\b(https?:\/\/\S+)/ig;
+
+		var urlRegex = /\b(https?:\/\/(?:[^,\!<\s])+)/ig
 			///\b(https?:\/\/[^\s+\"\<\>]+)/igm;
 		if (urlRegex.test(message)) {
-			return message.replace(urlRegex, "<a href=\"$1\" title=\"$1\" target=\"_blank\">$1</a>");
+			message = message.replace(urlRegex, "<a href=\"$1\" title=\"$1\" target=\"_blank\">$1</a>");
 		}
-*/
+
 		var parsedmessage = this.colorize(message);
 
 		// Only apply these if explicitly requested
