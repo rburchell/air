@@ -213,9 +213,9 @@ chatChannel.prototype = {
 		}
 	},
 
-	add: function(message, smilify) {
-		if (typeof smilify == 'undefined')
-			smilify = false;
+	add: function(message, dosmiley) {
+		if (dosmiley === 'undefined')
+			dosmiley = false;
 
 		if (chat.current != this.channel) {
 			$(this.divButton).setStyle({fontWeight : 'bold'});
@@ -236,7 +236,7 @@ chatChannel.prototype = {
 		var parsedmessage = this.colorize(message);
 
 		// Only apply these if explicitly requested
-		if (smilify)
+		if (dosmiley)
 			parsedmessage = this.smilify(parsedmessage);
 
 		// Also fix double spaces, we must do this AFTER url modifications etc.

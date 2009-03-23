@@ -112,9 +112,9 @@ var chat =
 	    return undefined;
 	},
 
-	add: function(channel, message) {
+	add: function(channel, message, dosmiley) {
 		if (chat.channel(channel) != undefined) {
-			chat.channel(channel).add(message);
+			chat.channel(channel).add(message, dosmiley);
 		}
 	},
 
