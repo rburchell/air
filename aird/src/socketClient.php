@@ -12,7 +12,7 @@ abstract class socketClient extends SocketBase {
 	public function __construct($sServer, $iPort)
 	{
 		AirD::Log(AirD::LOGTYPE_INTERNAL, "socketClient's constructor", true);
-		parent::__construct();
+		parent::__construct(Config::BIND_ADDRESS);
 		$this->connect($sServer, $iPort);
 		$this->set_non_block(true);
 		SocketEngine::AddFd($this);

@@ -54,6 +54,9 @@ abstract class AirD
 	}
 }
 
+if (!class_exists(Config))
+	die("Please make a config.");
+
 error_reporting(E_ALL | E_NOTICE | E_STRICT);
 AirD::Log(AirD::LOGTYPE_INTERNAL, "AirD " . AirD::VERSION_STRING . " starting up...");
 

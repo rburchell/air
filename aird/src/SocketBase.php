@@ -92,10 +92,7 @@ abstract class SocketBase {
 	{
 		$this->remote_address = $remote_address;
 		$this->remote_port    = $remote_port;
-		if (!is_resource($this->socket)) {
-			throw new socketException("Invalid socket or resource");
-		}
-		elseif (!@socket_connect($this->socket, $remote_address, $remote_port))
+		if (!@socket_connect($this->socket, $remote_address, $remote_port))
 		{
 			if (socket_strerror(socket_last_error()) != "Operation now in progress") // Must check string error, checking error code is not portable unfortunately.
 				throw new socketException("Could not connect to {$remote_address} - {$remote_port}: ".$this->get_error());
