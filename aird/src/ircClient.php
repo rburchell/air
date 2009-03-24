@@ -724,7 +724,7 @@ class ircClient extends socketClient
 
 	private function rpl_whoisserver($aParams)
 	{
-		$this->send_script("chat.onWhois('" . $this.escape($aParams[4]) . "')");
+		$this->send_script("chat.onWhois('" . $this->escape($aParams[4]) . "')");
 	}
 
 	private function rpl_endofwhowas($aParams)
