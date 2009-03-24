@@ -784,8 +784,8 @@ class ircClient extends socketClient
 			}
 			else
 			{
-				$this->err_generic($aParams);
 				AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented message " . $aParams[1]);
+				$this->err_generic($aParams);
 			}
 		} elseif ($aParams[1] == 'NOTICE') {
 			$this->on_server_notice($aParams[3]);
@@ -793,6 +793,7 @@ class ircClient extends socketClient
 			$this->on_mode($aParams[0], $aParams[1], $aParams[2], array_slice($aParams, 3));
 		} else {
 			AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented message " . $aParams[1]);
+			$this->err_generic($aParams);
 		}
 	}
 
@@ -858,13 +859,14 @@ class ircClient extends socketClient
 					if (is_callable(array($this, $function))) {
 						$this->$function($from, $command, $to, $param);
 					} elseif (substr($function, 0, 4) == 'err_') {
-						$this->err_generic($from, $command, $to, $param);
+						$this->err_generic($aParams);
 					} else {
 						AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented client message " . $command);
-						$this->err_generic($from, $command, $to, $param);
+						$this->err_generic($aParams);
 					}
 				} else {
 					AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented client message " . $command);
+						$this->err_generic($aParams);
 				}
 		}
 	}
