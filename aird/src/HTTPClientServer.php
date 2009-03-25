@@ -47,6 +47,11 @@ class HTTPClientServer extends socketServerClient
 	private function handle_request($request)
 	{
 		$output = '';
+
+		// Use the IP squid gives us
+		if ($request['x-forwarded-for'])
+			$this->remote_address = $request['x-forwarded-for'];
+
 		if (!$request['version'] || ($request['version'] != '1.0' && $request['version'] != '1.1')) {
 			// sanity check on HTTP version
 			$header  = 'HTTP/'.$request['version']." 400 Bad Request\r\n";
