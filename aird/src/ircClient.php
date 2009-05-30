@@ -273,7 +273,7 @@ class ircClient extends socketClient
 
 	public function quit($reason = false)
 	{
-		$reason = empty($reason) ? '' : " :$reason";
+		$reason = empty($reason) ? 'http://my.browserchat.net - free web chat' : " :$reason";
 		$this->write("QUIT$reason\r\n");
 		$this->Destroy();
 	}
@@ -925,7 +925,7 @@ class ircClient extends socketClient
 		list($iOctet1, $iOctet2, $iOctet3, $iOctet4) = explode(".", $this->client_address, 4);
 		$iDecimal = ((((($iOctet1 * 256 + $iOctet2) * 256) + $iOctet3) * 256) + $iOctet4);
 		$sHex = dechex($iDecimal);
-		$this->write("USER " . $sHex . " * * :air web irc client\r\n");
+		$this->write("USER " . $sHex . " * * :http://my.browserchat.net\r\n");
 		$this->write("NICK {$this->nick}\r\n");
 	}
 
