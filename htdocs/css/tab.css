@@ -46,7 +46,7 @@
 	color				: #15428B;
 }
 
-.on .tab_right, tab_right:hover {
+.on .tab_right, .tab_right:hover {
      background			: url('/images/tab_sprite.gif') no-repeat scroll right 0px;
 }
 
@@ -72,6 +72,6 @@
     float				: right;
 }
 
-.on .tab_close, tab_close:hover {
+.on .tab_close, .tab_close:hover {
 	background-image	: url('/images/tab_close_on.gif');
 }

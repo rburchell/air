@@ -1,11 +1,9 @@
 * {
     margin              : 0;
     padding             : 0;
-    border				: none;
     font-family			: monospace, sans-serif, serif;
     color				: #000000;
     font-size			: 11px;
-    text-align			: left;
 	text-decoration		: none;
 	vertical-align		: top;
 }
@@ -21,7 +19,7 @@ u {
 	text-decoration		: underline;
 }
 
-#header {
+.topheader {
 	height				: 22px;
 	padding-left		: 8px;
 	margin-top			: 4px;

@@ -16,22 +16,78 @@
 		<script type="text/javascript" src="/js/chatListWindow.js"></script>
 		<script type="text/javascript" src="/js/chatConnectWindow.js"></script>
 		<script type="text/javascript" src="/js/chatEditor.js"></script>
-		<!--[if lt IE 7.]>
-		<style>
-		.window_handle {
-			background	: url('/images/dialog_sprite.gif') repeat-x 0px -82px;
-		}
-		.sizer, #editor_resizer {
-			background-image : none;
-			margin  : 0;
-			padding : 0;
-			width   : 1px;
-		}
+		<style type="text/css">
+			.fpage
+			{
+				color: #000000;
+				font-family: Verdana;
+			}
 		</style>
-		<![endif]-->
+		<script type="text/javascript">
+			function onLoad()
+			{
+				$("connectbutton").style.display = "inline-block";
+				$("connectload").style.display = "none";
+			}
+
+			function connect()
+			{
+				$("connect").style.display = "none";
+				chat.nickname = $('entry_nick').value;
+				chat.server = $('entry_server').value;
+				chat.tryConnect();
+			}
+		</script>
 	</head>
-	<body>
-		<div id="header">air<span style="color:#b5cff3; font-size: 14px;" id="version"></span> -- <span style="color: #ffffff;" id="usercount"></span></div>
+	<body onload="onLoad();">
+		<div id="connect" style="z-index: 5000; position: absolute; top: 0px; left: 0px; background-color: #deecfd; width: 100%; height: 100%; display: block;">
+				<div id="login" style="text-align: center;" class="fpage">
+					<table style="border: 1px solid #99bbe8; margin-left: auto; margin-right: auto; margin-top: 5%; border-collapse: collapse;">
+						<tr>
+							<td class="topheader" style="color: #ffffff; text-align: center;" colspan="2">
+								Welcome to BrowserChat
+							</td>
+						</tr>
+						<tr>
+							<td colspan="2" class="fpage" style="padding-top: 5px; padding-bottom: 10px; padding-left: 5px; padding-right: 5px;">
+								Enter your nickname and the server you wish to connect to.
+							</td>
+						</tr>
+						<tr>
+							<td class="fpage" style="text-align: right;">
+								<b>
+									Nickname
+								</b>
+							</td>
+							<td style="text-align: right; padding-right: 5px; padding-bottom: 2px;">
+								<input type="text" id="entry_nick" style="border: 1px solid #99bbe8; width: 90%;">
+							</td>
+						</tr>
+						<tr>
+							<td class="fpage" style="text-align: right;">
+								<b>
+									Server
+								</b>
+							</td>
+							<td style="text-align: right; padding-right: 5px; padding-bottom: 10px;">
+								<input type="text" id="entry_server" style="border: 1px solid #99bbe8; width: 90%;" value="irc.browserchat.net">
+							</td>
+						</tr>
+						<tr>
+							<td colspan="2">
+								<div id="loading" style="padding-top: 5px; padding-right: 5px; padding-bottom: 4px; text-align: right;">
+									<input type="button" value="Connect" id="connectbutton" onclick="connect();">
+									<img src="/images/loading.gif" id="connectload">
+								</div>
+							</td>
+						</tr>
+					</table>
+				</div>
+				<div id="copyright" style="position: absolute; bottom: 0; right: 0; margin-right: 5px;">
+				Copyright &copy; 2009
+				</div>
+		</div>
+		<div id="header" class="topheader">air<span style="color:#b5cff3; font-size: 14px;" id="version"></span> -- <span style="color: #ffffff;" id="usercount"></span></div>
 		<div id="toolbar">
 			<div id="new_channel" class="channel_button">
 				<div class="tab_left"></div>

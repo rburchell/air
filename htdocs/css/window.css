@@ -27,7 +27,7 @@
 	height				: 26px;
     background			: url('/images/dialog_sprite.gif') repeat-x 0px -82px;
     color				: #083772;
-    text-weight			: bold;
+    font-weight			: bold;
     overflow			: hidden;
     clear				: none;
 }

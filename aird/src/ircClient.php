@@ -740,7 +740,8 @@ class ircClient extends socketClient
 	private function rpl_list($aParams)
 	{
 		// Topic will be in params[5].
-		$this->send_script("chat.listWindow.add('" . $this->escape($aParams[3]) . "', '" . $this->escape($aParams[4]). "')");
+		if ($aParams[3] != "*")
+			$this->send_script("chat.listWindow.add('" . $this->escape($aParams[3]) . "', '" . $this->escape($aParams[4]). "')");
 	}
 
 	private function rpl_listend($aParams)

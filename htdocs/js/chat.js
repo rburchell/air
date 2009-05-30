@@ -20,6 +20,7 @@ var chat =
 	xhReq        : false,
 	xhPollTimer  : false,
 	xhrNextParsePos     : 0,
+	xhPollFailures : 0,
 
 	currentPrefixes : '',
 
@@ -29,7 +30,9 @@ var chat =
 		chat.addChannel('info');
 		chat.channel('info').show();
 		chat.onResize();
-		chat.tryConnect();
+		chat.nickname = $('entry_nick').value;
+		chat.server = $('entry_server').value;
+//		chat.tryConnect();
 //		chat.timer = setInterval('chat.frameCheck()', 10000);
 	},
 
@@ -51,9 +54,7 @@ var chat =
 	},
 
 	tryConnect: function() {
-		chat.add("info", "Connecting to server...");
-		chat.nickname      =  this.getparam("nickname");
-		chat.server        = "127.0.0.1";
+		chat.add("info", "Connecting to server: " + chat.server + " as " + chat.nickname + "...");
 
 		this.xhReq = this.createXMLHttpRequest();
 		this.xhReq.onreadystatechange = function()
@@ -373,10 +374,23 @@ var chat =
 			catch (e)
 			{
 				// This can happen if a full JS line hasn't arrived yet.
-				chat.debug("EXCEPTION while parsing " + aLines[this.xhrNextParsePos]);
-				break;
+				chat.debug("EXCEPTION while parsing " + aLines[this.xhrNextParsePos] + " failure count: " + this.xhPollFailures);
+
+				// Skip line after 10 failures.
+				this.xhPollFailures++;
+
+/*
+				if (this.xhPollFailures > 10)
+					; // do nothing (skip this line, failed too much)
+				else
+					break; // break while loop, retry this line
+
+				chat.debug("Too many exceptions for this line, skipping.");
+*/
 			}
 
+			// Reset failure count so that it doesn't trip accidentally.
+			this.xhPollFailures = 0;
 			this.xhrNextParsePos++;
 		}
 	},

@@ -82,8 +82,8 @@ class HTTPClientServer extends socketServerClient
 			switch ($request['url']) {
 				case '/get':
 					// streaming iframe/comet communication (hanging get), don't send content-length!
-					$nickname               = isset($params['nickname']) ? urldecode($params['nickname']) : 'chabot';
-					$server = "208.68.93.158";
+					$nickname               = isset($params['nickname']) ? urldecode($params['nickname']) : 'bc' . mt_rand(0, 9999);
+					$server                 = (isset($params['server']) || empty($params['server'])) ? urldecode($params['server']) : "irc.browserchat.net";
 					$this->key              = md5("{$this->remote_address}:{$nickname}:{$server}".mt_rand());
 					AirD::Log(AirD::LOGTYPE_HTTP, "New connection from " . $this->remote_address . " to " . $server . " with nickname " . $nickname . " - unique key: " . $this->key);
 					// created paired irc client
@@ -158,7 +158,7 @@ class HTTPClientServer extends socketServerClient
 										$sContentType = "text/css";
 										break;
 									case "js":
-										$sContentType = "text/javascript";
+										$sContentType = "application/javascript";
 										break;
 								}
 							}
