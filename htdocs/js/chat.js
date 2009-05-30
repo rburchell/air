@@ -59,11 +59,17 @@ var chat =
 		this.xhReq = this.createXMLHttpRequest();
 		this.xhReq.onreadystatechange = function()
 		{
+			if (this.readyState == 3 && chat.xhPollTimer == false)
+			{
+				// Set up poll reader.
+				chat.xhPollTimer = setInterval('chat.pollForRead()', 500);
+			}
+
 			if (this.readyState != 4)
 				return;
 
 			// Reset XHR parse position, otherwise nothing will work when we reconnect.
-			this.xhrNextParsePos = 0;
+			chat.xhrNextParsePos = 0;
 			
 			// Add 500ms to the reconnect delay every time we are forced to reconnect, to not bombard the server with requests.
 			chat.reconnectdelay += 500;
@@ -76,10 +82,16 @@ var chat =
 
 			chat.add("info", "Disconnected from server (HTTP status " + this.status + "). Reconnecting in " + (chat.reconnectdelay / 1000) + " seconds.");
 			setTimeout('chat.frameDisconnected()', chat.reconnectdelay);
+
+			// Don't try parse stuff or things will explode
+			if (chat.xhPollTimer)
+			{
+				clearInterval(chat.xhPollTimer);
+				chat.xhPollTimer = false;
+			}
 		}
 		this.xhReq.open("GET", '/get?nickname=' + chat.nickname + '&server=' + chat.server, true);
 		this.xhReq.send(null);
-		this.xhPollTimer = setInterval('chat.pollForRead()', 500);
 	},
 
 	showList: function() {
