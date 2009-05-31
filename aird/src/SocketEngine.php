@@ -61,11 +61,11 @@ class SocketEngine
 
 	private static function clean_sockets()
 	{
-		foreach (SocketEngine::$clients as $socket) {
-			if ($socket->disconnected || !is_resource($socket->socket)) {
-				if (isset(SocketEngine::$clients[(int)$socket->socket])) {
-					unset(SocketEngine::$clients[(int)$socket->socket]);
-				}
+		foreach (SocketEngine::$clients as $socket)
+		{
+			if ($socket->shouldDestroy())
+			{
+				unset(SocketEngine::$clients[(int)$socket->socket]);
 			}
 		}
 	}

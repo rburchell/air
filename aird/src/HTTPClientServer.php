@@ -39,9 +39,9 @@ class HTTPClientServer extends socketServerClient
 	public function Destroy()
 	{
 		AirD::Log(AirD::LOGTYPE_HTTP, "Destroyed HTTP connection " . $this->key);
+		if ($this->irc_client)
+			$this->irc_client->setHTTPClient(null);
 		$this->close();
-		unset($this->irc_client);
-		$this->irc_client = false; // this avoids a warning in case of double-delete. not nice, but agressive deletion is better than lingering objects, and this is better than spurious warnings.
 	}
 
 	private function handle_request($request)
@@ -87,7 +87,8 @@ class HTTPClientServer extends socketServerClient
 					$this->key              = md5("{$this->remote_address}:{$nickname}:{$server}".mt_rand());
 					AirD::Log(AirD::LOGTYPE_HTTP, "New connection from " . $this->remote_address . " to " . $server . " with nickname " . $nickname . " - unique key: " . $this->key);
 					// created paired irc client
-					$client = new ircClient($this, $this->key, $server, 6667);
+					$client = new ircClient($this->key, $server, 6667);
+					$client->setHTTPClient($this);
 					$client->client_address = $this->remote_address;
 					$client->nick           = $nickname;
 					$this->irc_client       = $client;
@@ -238,11 +239,6 @@ class HTTPClientServer extends socketServerClient
 
 	public function on_disconnect()
 	{
-		if ($this->irc_client)
-		{
-			$this->irc_client->quit("Remote client closed connection");
-		}
-
 		$this->Destroy();
 	}
 

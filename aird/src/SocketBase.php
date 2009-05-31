@@ -65,7 +65,12 @@ abstract class SocketBase {
 			@socket_shutdown($this->socket, 2);
 			@socket_close($this->socket);
 		}
-		$this->socket = (int)$this->socket;
+		$this->disconnected = true;
+	}
+
+	public function shouldDestroy()
+	{
+		return $this->disconnected;
 	}
 
 	public function write($buffer, $length = 4096)

@@ -38,6 +38,10 @@ class ircClient extends socketClient
 	private $sLazyParamModes; // Modes that require a param to add, none to remove (+l)
 	private $sNoParam; // Modes that don't take a parameter (+imnt)
 
+	/** When the HTTP client disconnected
+	 */
+	private $iHTTPDisconnected;
+
 	/** Mode -> prefix lookup table.
 	  * e.g. o => @
 	  */
@@ -57,13 +61,22 @@ class ircClient extends socketClient
 	/help -> give overview of commands!
 	*/
 
-	public function __construct($oHTTPClient, $sKey, $sServer, $iPort)
+	public function __construct($sKey, $sServer, $iPort)
 	{
-		$this->oHTTPClient = $oHTTPClient;
 		$this->key = $sKey;
 		AirD::Log(AirD::LOGTYPE_INTERNAL, "Created a new IRC client: " . $sKey, true);
 		parent::__construct($sServer, $iPort);
 		AirD::$aIRCClients[$sKey] = $this;
+	}
+
+	public function setHTTPClient($oHTTPClient)
+	{
+		$this->oHTTPClient = $oHTTPClient;
+
+		if (!$oHTTPClient)
+		{
+			$this->iHTTPDisconnected = time();
+		}
 	}
 
 	public function __destruct()
@@ -76,7 +89,12 @@ class ircClient extends socketClient
 	{
 		AirD::Log(AirD::LOGTYPE_INTERNAL, "Destroyed IRC client " . $this->key);
 		$this->close();
-		unset($this->oHTTPClient);
+
+		if ($this->oHTTPClient)
+		{
+			$this->oHTTPClient->close();
+			unset($this->oHTTPClient);
+		}
 		unset(AirD::$aIRCClients[$this->key]);
 	}
 
@@ -162,7 +180,6 @@ class ircClient extends socketClient
 
 	public function write($s, $l = 5000)
 	{
-		AirD::Log(AirD::LOGTYPE_INTERNAL, "Wrote " . $s . " to " . (int)$this->socket);
 		parent::write($s, $l);
 	}
 
@@ -275,7 +292,7 @@ class ircClient extends socketClient
 	{
 		$reason = empty($reason) ? 'http://my.browserchat.net - free web chat' : " :$reason";
 		$this->write("QUIT$reason\r\n");
-		$this->Destroy();
+		$this->close();
 	}
 
 	public function action($destination, $msg)
@@ -885,7 +902,7 @@ class ircClient extends socketClient
 
 			if ($aParse[0] == $this->server)
 			{
-				AirD::Log(AirD::LOGTYPE_IRC, "handle_server_message: " . implode(" ", $aParse), true);
+//				AirD::Log(AirD::LOGTYPE_IRC, "handle_server_message: " . implode(" ", $aParse), true);
 				$this->handle_server_message($aParse);
 			}
 			else
@@ -893,7 +910,7 @@ class ircClient extends socketClient
 				// XXX: Strip user@host, this is a bit meh, we may want to not do this in the future.
 				$aFrom = explode("!", $aParse[0]);
 				$aParse[0] = $aFrom[0];
-				AirD::Log(AirD::LOGTYPE_IRC, "handle_message: " . implode(" ", $aParse), true);
+//				AirD::Log(AirD::LOGTYPE_IRC, "handle_message: " . implode(" ", $aParse), true);
 				$this->handle_message($aParse);
 			}
 		} elseif (substr($string,0,6) == 'NOTICE') {
@@ -936,5 +953,17 @@ class ircClient extends socketClient
 			$this->read_buffer = substr($this->read_buffer, $pos + 2);
 			$this->on_readln($string);
 		}
+	}
+
+	public function shouldDestroy()
+	{
+		if (!$this->oHTTPClient && time() - $this->iHTTPDisconnected > 10)
+		{
+			AirD::Log(AirD::LOGTYPE_IRC, "Disconnected IRC session or abandoned IRC session (TS: " . $this->iHTTPDisconnected . ")");
+			$this->Destroy();
+			return true;
+		}
+
+		return parent::shouldDestroy();
 	}
 }
