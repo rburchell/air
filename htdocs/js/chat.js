@@ -2,6 +2,15 @@
 // Licenced under the GPLv2. For more info see http://www.chabotc.com
 
 /****************************** main chat application  ***********************************/
+var xhopts = 
+{
+	// Which line in the response array are we up to
+	nextParsePos: 0,
+
+	// How many poll failures have we experienced
+	pollFailures: 0,
+}
+
 var chat =
 {
 	nickname     : '',
@@ -16,12 +25,6 @@ var chat =
 	listWindow   : false,
 	reconnectdelay : 0,
 
-	// XHR Variables for maintaining a persistant connection to the server.
-	xhReq        : false,
-	xhPollTimer  : false,
-	xhrNextParsePos     : 0,
-	xhPollFailures : 0,
-
 	currentPrefixes : '',
 
 	initialize: function() {
@@ -32,8 +35,6 @@ var chat =
 		chat.onResize();
 		chat.nickname = $('entry_nick').value;
 		chat.server = $('entry_server').value;
-//		chat.tryConnect();
-//		chat.timer = setInterval('chat.frameCheck()', 10000);
 	},
 
 	getparam: function(name) {
@@ -52,46 +53,67 @@ var chat =
 		// XXX: Make this togglable.
 		chat.add("info", message);
 	},
-
-	tryConnect: function() {
-		chat.add("info", "Connecting to server: " + chat.server + " as " + chat.nickname + "...");
-
-		this.xhReq = this.createXMLHttpRequest();
-		this.xhReq.onreadystatechange = function()
+	
+	createStream: function(url)
+	{
+		return new Ajax.Request(url,
 		{
-			if (this.readyState == 3 && chat.xhPollTimer == false)
+			method: 'get',
+
+			onSuccess: function(transport)
 			{
-				// Set up poll reader.
-				chat.xhPollTimer = setInterval('chat.pollForRead()', 500);
-			}
+				// Disconnected. Reset nextParsePos so that eval() knows where to go.
+				xhopts.nextParsePos = 0;
 
-			if (this.readyState != 4)
-				return;
+				// Add 500ms to the reconnect delay every time we are forced to reconnect, to not bombard the server with requests.
+				chat.reconnectdelay += 500;
 
-			// Reset XHR parse position, otherwise nothing will work when we reconnect.
-			chat.xhrNextParsePos = 0;
-			
-			// Add 500ms to the reconnect delay every time we are forced to reconnect, to not bombard the server with requests.
-			chat.reconnectdelay += 500;
+				// Don't stop an instant reconnect attempt, but if that fails, minimum wait is 5 seconds to stop server hammering.
+				if (chat.reconnectdelay > 0 && chat.reconnectdelay < 5000)
+					chat.reconnectdelay = 5000;
+				else if (chat.reconnectdelay > 50000) // Also cap at 50 seconds.
+					chat.reconnectdelay = 50000;
 
-			// Don't stop an instant reconnect attempt, but if that fails, minimum wait is 5 seconds to stop server hammering.
-			if (chat.reconnectdelay > 0 && chat.reconnectdelay < 5000)
-				chat.reconnectdelay = 5000;
-			else if (chat.reconnectdelay > 50000) // Also cap at 50 seconds.
-				chat.reconnectdelay = 50000;
+				chat.add("info", "Disconnected from server (HTTP status " + transport.status + "). Reconnecting in " + (chat.reconnectdelay / 1000) + " seconds.");
+				setTimeout('chat.frameDisconnected()', chat.reconnectdelay);
+			},
 
-			chat.add("info", "Disconnected from server (HTTP status " + this.status + "). Reconnecting in " + (chat.reconnectdelay / 1000) + " seconds.");
-			setTimeout('chat.frameDisconnected()', chat.reconnectdelay);
-
-			// Don't try parse stuff or things will explode
-			if (chat.xhPollTimer)
+			onInteractive: function(transport)
 			{
-				clearInterval(chat.xhPollTimer);
-				chat.xhPollTimer = false;
+				var aLines = transport.responseText.split("\n");
+
+				while (xhopts.nextParsePos != aLines.length)
+				{
+				/*
+					// This will happen constantly if there is nothing new to recieve
+					// This is *important* to keep,  as when a burst of text comes through, it would mark the empty line as evaluated already
+					// meaning it would skip the first line of the burst. Is there a better way to do this?
+					if (aLines[xhopts.nextParsePos].trim() == '')
+					{
+						break;
+					}
+					*/
+
+					try
+					{
+						eval(aLines[xhopts.nextParsePos]);
+					}
+					catch (e)
+					{
+						// This can happen if a full JS line hasn't arrived yet.
+						chat.debug("EXCEPTION while parsing " + aLines[xhopts.nextParsePos] + " failure count: " + xhopts.pollFailures++);
+					}
+
+					xhopts.nextParsePos++;
+				}
 			}
-		}
-		this.xhReq.open("GET", '/get?nickname=' + chat.nickname + '&server=' + chat.server, true);
-		this.xhReq.send(null);
+		});
+	},
+
+	tryConnect: function()
+	{
+		chat.add("info", "Connecting to server: " + chat.server + " as " + chat.nickname + "...");
+		stream = this.createStream('/get?nickname=' + chat.nickname + '&server=' + chat.server);
 	},
 
 	showList: function() {
@@ -138,9 +160,10 @@ var chat =
 	},
 
 	message: function(msg) {
-		var sendXH = this.createXMLHttpRequest();
-		sendXH.open("GET", '/message?key=' + chat.key + '&msg=' + encodeURIComponent(msg) + '&channel='+ encodeURIComponent(chat.current), true);
-		sendXH.send(null);
+		return new Ajax.Request('/message?key=' + chat.key + '&msg=' + encodeURIComponent(msg) + '&channel='+ encodeURIComponent(chat.current),
+		{
+			method: 'get',
+		});
 	},
 
 	onConnecting: function() {
@@ -340,71 +363,6 @@ var chat =
 	onSetPrefixTypes: function(prefixes)
 	{
 		chat.currentPrefixes = prefixes;
-	},
-
-	// Trialling a new non-iframe method.
-	createXMLHttpRequest: function()
-	{
-		try
-		{
-			return new ActiveXObject("Msxml2.XMLHTTP");
-		}
-		catch(e) {}
-		try
-		{
-			return new ActiveXObject("Microsoft.XMLHTTP");
-		}
-		catch(e) {}
-		try
-		{
-			return new XMLHttpRequest();
-		}
-		catch(e) {}
-		alert("XMLHttpRequest not supported");
-		return null;
-	},
-
-	pollForRead: function()
-	{
-		// XXX: It may be an optimisation to split this in onReadyStateChange.
-		var aLines = this.xhReq.responseText.split("\n");
-
-		while (this.xhrNextParsePos != aLines.length)
-		{
-			// This will happen constantly if there is nothing new to recieve
-			// This is *important* to keep,  as when a burst of text comes through, it would mark the empty line as evaluated already
-			// meaning it would skip the first line of the burst. Is there a better way to do this?
-			if (aLines[this.xhrNextParsePos].trim() == '')
-			{
-				break;
-			}
-
-			try
-			{
-				eval(aLines[this.xhrNextParsePos]);
-			}
-			catch (e)
-			{
-				// This can happen if a full JS line hasn't arrived yet.
-				chat.debug("EXCEPTION while parsing " + aLines[this.xhrNextParsePos] + " failure count: " + this.xhPollFailures);
-
-				// Skip line after 10 failures.
-				this.xhPollFailures++;
-
-/*
-				if (this.xhPollFailures > 10)
-					; // do nothing (skip this line, failed too much)
-				else
-					break; // break while loop, retry this line
-
-				chat.debug("Too many exceptions for this line, skipping.");
-*/
-			}
-
-			// Reset failure count so that it doesn't trip accidentally.
-			this.xhPollFailures = 0;
-			this.xhrNextParsePos++;
-		}
 	},
 }
 
