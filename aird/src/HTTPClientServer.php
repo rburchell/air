@@ -262,7 +262,7 @@ class HTTPClientServer extends socketServerClient
 		if (strlen($this->write_buffer) == 0 && !$this->keep_alive && !$this->streaming_client) {
 			$this->disconnected = true;
 			$this->on_disconnect();
-			$this->close();
+			$this->Destroy();
 		}
 	}
 }

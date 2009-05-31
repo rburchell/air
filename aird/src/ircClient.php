@@ -41,6 +41,7 @@ class ircClient extends socketClient
 	/** When the HTTP client disconnected
 	 */
 	private $iHTTPDisconnected;
+	private $aPendingMessages = array();
 
 	/** Mode -> prefix lookup table.
 	  * e.g. o => @
@@ -76,6 +77,12 @@ class ircClient extends socketClient
 		if (!$oHTTPClient)
 		{
 			$this->iHTTPDisconnected = time();
+		}
+		else
+		{
+			// Reconnected, send all pending messages in the queue
+			foreach ($this->aPendingMessages as $sMessage)
+				$this->oHTTPClient->write($sMessage);
 		}
 	}
 
@@ -932,8 +939,13 @@ class ircClient extends socketClient
 		AirD::Log(AirD::LOGTYPE_JAVASCRIPT, "Sending script nr " . $this->script_sends++ . " to " . $this->key . ": " . $msg);
 		// CLIENT COUNT SHOULD NOT BE HERE.
 		if ($this->oHTTPClient)
+		{
 			$this->oHTTPClient->write($msg. ";\n");
-				//chat.onSetNumberOfUsers(" . count(AirD::$aIRCClients) . ");\n");
+		}
+		else
+		{
+			$this->aPendingMessages[] = $msg . ";\n";
+		}
 	}
 
 	public function on_connect()
