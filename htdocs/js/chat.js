@@ -11,6 +11,79 @@ var xhopts =
 	pollFailures: 0,
 }
 
+var Stream =
+{
+	createStream: function(url)
+	{
+		return new Ajax.Request(url,
+		{
+			method: 'get',
+
+			onSuccess: function(transport)
+			{
+				// Disconnected. Reset nextParsePos so that eval() knows where to go.
+				xhopts.nextParsePos = 0;
+
+				if (transport.status == 200)
+				{
+					chat.debug("Status 200, reconnecting... session " + chat.key);
+					Stream.createStream('/renegotiate?key=' + chat.key);
+				}
+				else
+				{
+					// Add 500ms to the reconnect delay every time we are forced to reconnect, to not bombard the server with requests.
+					chat.reconnectdelay += 500;
+
+					// Don't stop an instant reconnect attempt, but if that fails, minimum wait is 5 seconds to stop server hammering.
+					if (chat.reconnectdelay > 0 && chat.reconnectdelay < 5000)
+						chat.reconnectdelay = 5000;
+					else if (chat.reconnectdelay > 50000) // Also cap at 50 seconds.
+						chat.reconnectdelay = 50000;
+
+					chat.add("info", "Disconnected from server (HTTP status " + transport.status + "). Reconnecting in " + (chat.reconnectdelay / 1000) + " seconds.");
+					setTimeout('chat.frameDisconnected()', chat.reconnectdelay);
+				}
+			},
+
+			onLoading: function(transport)
+			{
+				chat.debug("Request sent...");
+			},
+
+			onInteractive: function(transport)
+			{
+				var aLines = transport.responseText.split("\n");
+				chat.debug("onInteractive, I have " + aLines.length + " lines to parse, pos is " + xhopts.nextParsePos);
+
+				while (xhopts.nextParsePos != aLines.length)
+				{
+					chat.debug("Parsing " + aLines[xhopts.nextParsePos]);
+					// This will happen constantly if there is nothing new to recieve
+					// This is *important* to keep,  as when a burst of text comes through, it would mark the empty line as evaluated already
+					// meaning it would skip the first line of the burst. Is there a better way to do this?
+					if (aLines[xhopts.nextParsePos].trim() == '')
+					{
+						break;
+					}
+
+					try
+					{
+						eval(aLines[xhopts.nextParsePos]);
+					}
+					catch (e)
+					{
+						// This can happen if a full JS line hasn't arrived yet.
+						chat.debug("EXCEPTION while parsing " + aLines[xhopts.nextParsePos] + " failure count: " + xhopts.pollFailures++);
+					}
+
+					xhopts.nextParsePos++;
+				}
+			}
+		});
+	},
+}
+
+
 var chat =
 {
 	nickname     : '',
@@ -54,66 +127,10 @@ var chat =
 		chat.add("info", message);
 	},
 	
-	createStream: function(url)
-	{
-		return new Ajax.Request(url,
-		{
-			method: 'get',
-
-			onSuccess: function(transport)
-			{
-				// Disconnected. Reset nextParsePos so that eval() knows where to go.
-				xhopts.nextParsePos = 0;
-
-				// Add 500ms to the reconnect delay every time we are forced to reconnect, to not bombard the server with requests.
-				chat.reconnectdelay += 500;
-
-				// Don't stop an instant reconnect attempt, but if that fails, minimum wait is 5 seconds to stop server hammering.
-				if (chat.reconnectdelay > 0 && chat.reconnectdelay < 5000)
-					chat.reconnectdelay = 5000;
-				else if (chat.reconnectdelay > 50000) // Also cap at 50 seconds.
-					chat.reconnectdelay = 50000;
-
-				chat.add("info", "Disconnected from server (HTTP status " + transport.status + "). Reconnecting in " + (chat.reconnectdelay / 1000) + " seconds.");
-				setTimeout('chat.frameDisconnected()', chat.reconnectdelay);
-			},
-
-			onInteractive: function(transport)
-			{
-				var aLines = transport.responseText.split("\n");
-
-				while (xhopts.nextParsePos != aLines.length)
-				{
-				/*
-					// This will happen constantly if there is nothing new to recieve
-					// This is *important* to keep,  as when a burst of text comes through, it would mark the empty line as evaluated already
-					// meaning it would skip the first line of the burst. Is there a better way to do this?
-					if (aLines[xhopts.nextParsePos].trim() == '')
-					{
-						break;
-					}
-					*/
-
-					try
-					{
-						eval(aLines[xhopts.nextParsePos]);
-					}
-					catch (e)
-					{
-						// This can happen if a full JS line hasn't arrived yet.
-						chat.debug("EXCEPTION while parsing " + aLines[xhopts.nextParsePos] + " failure count: " + xhopts.pollFailures++);
-					}
-
-					xhopts.nextParsePos++;
-				}
-			}
-		});
-	},
-
 	tryConnect: function()
 	{
 		chat.add("info", "Connecting to server: " + chat.server + " as " + chat.nickname + "...");
-		stream = this.createStream('/get?nickname=' + chat.nickname + '&server=' + chat.server);
+		Stream.createStream('/get?nickname=' + chat.nickname + '&server=' + chat.server);
 	},
 
 	showList: function() {

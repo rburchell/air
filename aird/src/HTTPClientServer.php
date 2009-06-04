@@ -23,12 +23,14 @@ class HTTPClientServer extends socketServerClient
 {
 	private $accepted;
 	private $last_action;
-	private $max_total_time   = 60;
-	private $max_idle_time    = 30;
+	private $max_total_time   = 20;
+	private $max_idle_time    = 10;
 	private $keep_alive       = false;
 	public  $key              = false;
 	public  $streaming_client = false;
 	private $irc_client       = false;
+
+	private $aHeaders = array();
 
 	public function __destruct()
 	{
@@ -44,159 +46,232 @@ class HTTPClientServer extends socketServerClient
 		$this->close();
 	}
 
+	private function setHeader($sHeader, $sValue)
+	{
+		$this->aHeaders[$sHeader] = $sValue;
+	}
+
+	private function sendResponse($sHTTPVersion, $iResponse, $sResponse, $sBody)
+	{
+		// Set date
+		$this->setHeader("Date", gmdate('D, d M Y H:i:s T'));
+
+		// First, do something useful with HTTP info.
+		$sResponse = "HTTP/". $sHTTPVersion . " " . $iResponse . " " . $sResponse . "\r\n";
+
+		// Headers next.
+		foreach ($this->aHeaders as $sKey => $sVal)
+		{
+			$sResponse .= $sKey . ": " . $sVal . "\r\n";
+		}
+
+		if (!empty($sBody))
+		{
+			// End headers
+			$sResponse .= "\r\n";
+
+			// Now body.
+			$sResponse .= $sBody;
+		}
+
+		// Write whole response
+		$this->write($sResponse);
+
+		// Blank headers, primarily for keepalive.
+		$this->aHeaders = array();
+	}
+
+	private function handleFileRequest($aRequest)
+	{
+		while (strpos("..", $aRequest['url']) !== false)
+		$aRequest['url'] = str_replace('..', '', $aRequest['url']);
+
+		$file = '../htdocs'.$aRequest['url'];
+		if (!file_exists($file) || !is_file($file))
+		{
+			AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a NONEXISTANT file: " . $file,  true);
+			$this->setHeader("Accept-Ranges", "bytes");
+			$this->setHeader("Last-Modified", gmdate('D, d M Y H:i:s T', time()));
+			$this->setHeader("Cache-Control", "no-cache, must-revalidate");
+			$this->setHeader("Expires", "Mon, 26 Jul 1997 05:00:00 GMT");
+			$sMsg = "<h1>404</h1>The document you searched so hard for doesn't exist. Sorry!";
+			$this->setHeader("Content-Length", strlen($sMsg));
+			$this->sendResponse($aRequest['version'], 404, "404 Not Found", $sMsg);
+			return;
+		}
+
+		$mtime = filemtime($file);
+
+		//  [if-modified-since] => fri,  20 mar 2009 00:10:32 gmt
+		if (isset($aRequest['if-modified-since']) && strtotime($aRequest['if-modified-since']) == $mtime)
+		{
+			// Previously requested data, just send 304
+			AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a CACHED file: " . $file,  true);
+			$this->sendResponse($aRequest['version'], 304, "OK", "");
+			return;
+		}
+
+		// Newly requested data, process request properly
+		AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a file: " . $file,  true);
+
+		// Do basic mime type sniffing. Required for Chrome, and a good idea anyway.
+		$sContentType = "";
+		$aExt = explode(".", basename($file));
+		if (isset($aExt[1]))
+		{
+			switch (strtolower($aExt[1]))
+			{
+				case "css":
+					$sContentType = "text/css";
+					break;
+				case "js":
+					$sContentType = "application/javascript";
+					break;
+			}
+		}
+
+		// Send file.
+		$sFile = file_get_contents($file);
+		$this->setHeader("Accept-Ranges", "bytes");
+		$this->setHeader("Last-Modified", gmdate('D, d M Y H:i:s T', filemtime($file)));
+		$this->setHeader("Content-Length", strlen($sFile)); // was using filesize($file)
+		if (!empty($sContentType))
+			$this->setHeader("Content-Type", $sContentType);
+		$this->sendResponse($aRequest['version'], 200, "OK", $sFile);
+	}
+
 	private function handle_request($request)
 	{
+		$aHeaders = array();
+		$sOutput = "";
 		$output = '';
 
 		// Use the IP squid gives us
-		if ($request['x-forwarded-for'])
+		if (isset($request['x-forwarded-for']))
 			$this->remote_address = $request['x-forwarded-for'];
 
-		if (!$request['version'] || ($request['version'] != '1.0' && $request['version'] != '1.1')) {
-			// sanity check on HTTP version
-			$header  = 'HTTP/'.$request['version']." 400 Bad Request\r\n";
-			$output  = '400: Bad request';
-			$header .= "Content-Length: ".strlen($output)."\r\n";
-		} elseif (!isset($request['method']) || ($request['method'] != 'get' && $request['method'] != 'post')) {
-			// sanity check on request method (only get and post are allowed)
-			$header  = 'HTTP/'.$request['version']." 400 Bad Request\r\n";
-			$output  = '400: Bad request';
-			$header .= "Content-Length: ".strlen($output)."\r\n";
-		} else {
-			// handle request
-			if (empty($request['url']) || $request['url'] == "/") {
-				$request['url'] = '/index.html';
+		// Sanity check on HTTP version
+		if (!$request['version'] || ($request['version'] != '1.0' && $request['version'] != '1.1'))
+		{
+			$sMsg = "Bad request: You specified a version of HTTP I don't understand. I only speak 1.0 or 1.1.";
+			$this->setHeader("Content-Length", strlen($sMsg));
+			$this->sendResponse($request['version'], 400, "Bad Request", $sMsg);
+			return;
+		}
+		
+		// sanity check on request method (only get and post are allowed)
+		if (!isset($request['method']) || ($request['method'] != 'get'))
+		{
+			$sMsg = "Bad request: You specified a HTTP method I don't understand. I only understand GET.";
+			$this->setHeader("Content-Length", strlen($sMsg));
+			$this->sendResponse($request['version'], 400, "Bad Request", $sMsg);
+			return;
+		}
+
+
+		// Do some basic URI mongling.
+		if (empty($request['url']) || $request['url'] == "/")
+		{
+			$request['url'] = '/index.html';
+		}
+
+		// GET params => array.
+		if (strpos($request['url'],'?') !== false)
+		{
+			$params = substr($request['url'], strpos($request['url'],'?') + 1);
+			$params = explode('&', $params);
+			foreach($params as $key => $param)
+			{
+				$pair = explode('=', $param);
+				$params[$pair[0]] = isset($pair[1]) ? $pair[1] : '';
+				unset($params[$key]);
 			}
-			// parse get params into $params variable
-			if (strpos($request['url'],'?') !== false) {
-				$params = substr($request['url'], strpos($request['url'],'?') + 1);
-				$params = explode('&', $params);
-				foreach($params as $key => $param) {
-					$pair = explode('=', $param);
-					$params[$pair[0]] = isset($pair[1]) ? $pair[1] : '';
-					unset($params[$key]);
+			$request['url'] = substr($request['url'], 0, strpos($request['url'], '?'));
+		}
+
+		if (!$this->keep_alive)
+		{
+			$this->setHeader("Connection", "Keep-Alive");
+			$this->setHeader("Keep-Alive", "timeout={$this->max_idle_time} max={$this->max_total_time}");
+			AirD::Log(AirD::LOGTYPE_HTTP, "Keepalive");
+		}
+		else
+		{
+		$this->keep_alive = false;
+			$this->setHeader("Connection", "Close");
+			AirD::Log(AirD::LOGTYPE_HTTP, "Close");
+		}
+
+		switch ($request['url'])
+		{
+			case '/get':
+				// streaming iframe/comet communication (hanging get), don't send content-length!
+				$nickname               = (isset($params['nickname']) && !empty($params['nickname'])) ? urldecode($params['nickname']) : 'bc' . mt_rand(0, 9999);
+				$server                 = (isset($params['server']) && !empty($params['server'])) ? urldecode($params['server']) : "irc.browserchat.net";
+				$this->key              = md5("{$this->remote_address}:{$nickname}:{$server}".mt_rand());
+				AirD::Log(AirD::LOGTYPE_HTTP, "New connection from " . $this->remote_address . " to " . $server . " with nickname " . $nickname . " - unique key: " . $this->key);
+				// created paired irc client
+				$client = new ircClient($this->key, $server, 6667);
+				$client->setHTTPClient($this);
+				$client->client_address = $this->remote_address;
+				$client->nick           = $nickname;
+				$this->irc_client       = $client;
+				$this->streaming_client = true;
+				$this->setHeader("Cache-Control", "no-cache, must-revalidate");
+				$this->setHeader("Expires", "Mon, 26 Jul 1997 05:00:00 GMT");
+				$this->sendResponse($request['version'], 200, "OK", "chat.key = '{$this->key}';\nthis.connected = true;\n");
+
+				if (!empty($client->output))
+				{
+					$this->write($client->output);
+					$client->output = '';
 				}
-				$request['url'] = substr($request['url'], 0, strpos($request['url'], '?'));
-			}
-
-			switch ($request['url']) {
-				case '/get':
-					// streaming iframe/comet communication (hanging get), don't send content-length!
-					$nickname               = (isset($params['nickname']) && !empty($params['nickname'])) ? urldecode($params['nickname']) : 'bc' . mt_rand(0, 9999);
-					$server                 = (isset($params['server']) && !empty($params['server'])) ? urldecode($params['server']) : "irc.browserchat.net";
-					$this->key              = md5("{$this->remote_address}:{$nickname}:{$server}".mt_rand());
-					AirD::Log(AirD::LOGTYPE_HTTP, "New connection from " . $this->remote_address . " to " . $server . " with nickname " . $nickname . " - unique key: " . $this->key);
-					// created paired irc client
-					$client = new ircClient($this->key, $server, 6667);
-					$client->setHTTPClient($this);
-					$client->client_address = $this->remote_address;
-					$client->nick           = $nickname;
-					$this->irc_client       = $client;
+				break;
+			case '/renegotiate':
+				if (isset($params['key']) && !empty($params['key']) && isset(AirD::$aIRCClients[$params['key']]))
+				{
+					$this->irc_client       = AirD::$aIRCClients[$params['key']];
 					$this->streaming_client = true;
-					$header = "";
-					$header  = "HTTP/{$request['version']} 200 OK\r\n";
-					$header .= "Cache-Control: no-cache, must-revalidate\r\n";
-					$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
-					/*$output    = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n".
-								 "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n".
-								 "<head>\n".
-								 "<script type=\"text/javascript\">\nvar chat = window.parent.chat;\nchat.key = '{$this->key}';\nchat.connected = true;\n</script>\n".
-								 "</head>\n".
-								 "<body>\n";*/
-				$output    =  "chat.key = '{$this->key}';\nthis.connected = true;\n";
+					$this->key = $params['key'];
+					AirD::Log(AirD::LOGTYPE_HTTP, "Renegotiated for " . $params['key']);
+					$this->setHeader("Cache-Control", "no-cache, must-revalidate");
+					$this->setHeader("Expires", "Mon, 26 Jul 1997 05:00:00 GMT");
+					$this->sendResponse($request['version'], 200, "OK", "chat.key = '{$this->key}';\nthis.connected = true;\n");
+					AirD::$aIRCClients[$params['key']]->setHTTPClient($this);
 
-					if (!empty($client->output)) {
-						$output .= $client->output;
+					if (!empty($client->output))
+					{
+						$this->write($client->output);
 						$client->output = '';
 					}
-					break;
-				case '/message':
-					if (!empty($params['key']) && !empty($params['msg']))
-					{
-						$sChannel = urldecode($params['channel']);
-						AirD::Log(AirD::LOGTYPE_HTTP, "Got a command from client " . $params['key'] . " in " . $params['channel'] . ": " . urldecode($params['msg']),  true);
-						if (isset(AirD::$aIRCClients[$params['key']]))
-							AirD::$aIRCClients[$params['key']]->message($sChannel, html_entity_decode(urldecode($params['msg'])));
-					}
-					$output  = "<script type=\"text/javascript\"></script>\r\n";
-					$header  = "HTTP/{$request['version']} 200 OK\r\n";
-					$header .= "Accept-Ranges: bytes\r\n";
-					$header .= "Cache-Control: no-cache, must-revalidate\r\n";
-					$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
-					$header .= "Accept-Ranges: bytes\r\n";
-					$header .= "Content-Length: ".strlen($output)."\r\n";
-					break;
-				default:
-					//  [if-modified-since] => fri,  20 mar 2009 00:10:32 gmt
-					while (strpos("..", $request['url']) !== false)
-						$request['url'] = str_replace('..', '', $request['url']);
+				}
+				else
+				{
+					AirD::Log(AirD::LOGTYPE_HTTP, "Renegotiation for " . $params['key'] . " failed");
+					$sMsg = "Bad request: The key was invalid"; 
+					$this->setHeader("Content-Length", strlen($sMsg));
+					$this->sendResponse($request['version'], 400, "Bad Request", $sMsg);
+					return;
+				}
+				break;
+			case '/message':
+				if (!empty($params['key']) && !empty($params['msg']))
+				{
+					$sChannel = urldecode($params['channel']);
+					AirD::Log(AirD::LOGTYPE_HTTP, "Got a command from client " . $params['key'] . " in " . $params['channel'] . ": " . urldecode($params['msg']),  true);
+					if (isset(AirD::$aIRCClients[$params['key']]))
+						AirD::$aIRCClients[$params['key']]->message($sChannel, html_entity_decode(urldecode($params['msg'])));
+				}
 
-					$file = '../htdocs'.$request['url'];
-					if (file_exists($file) && is_file($file))
-					{
-						$mtime = filemtime($file);
-
-						if (isset($request['if-modified-since']) && strtotime($request['if-modified-since']) == $mtime)
-						{
-							// Previously requested data, just send 304
-							AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a CACHED file: " . $file,  true);
-							$header  = "HTTP/{$request['version']} 304 OK\r\n";
-							$output = "";
-						}
-						else
-						{
-							// Newly requested data, process request properly
-							AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a file: " . $file,  true);
-
-							// Do basic mime type sniffing. Required for Chrome, and a good idea anyway.
-							$sContentType = "";
-							$aExt = explode(".", basename($file));
-							if (isset($aExt[1]))
-							{
-								switch (strtolower($aExt[1]))
-								{
-									case "css":
-										$sContentType = "text/css";
-										break;
-									case "js":
-										$sContentType = "application/javascript";
-										break;
-								}
-							}
-
-							// rewrite header
-							$header  = "HTTP/{$request['version']} 200 OK\r\n";
-							$header .= "Accept-Ranges: bytes\r\n";
-							$header .= 'Last-Modified: '.gmdate('D, d M Y H:i:s T', filemtime($file))."\r\n";
-							$size    = filesize($file);
-							$header .= "Content-Length: $size\r\n";
-							if (!empty($sContentType))
-								$header .= "Content-Type: " . $sContentType . "\r\n";
-							$output  = file_get_contents($file);
-						}
-					} else {
-						AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a NONEXISTANT file: " . $file,  true);
-						$header  = "HTTP/{$request['version']} 200 OK\r\n";
-						$header .= "Accept-Ranges: bytes\r\n";
-						$header .= 'Last-Modified: '.gmdate('D, d M Y H:i:s T', time())."\r\n";
-						$header .= "Cache-Control: no-cache, must-revalidate\r\n";
-						$header .= "Expires: Mon, 26 Jul 1997 05:00:00 GMT\r\n";
-						$output  = "<h1>404: Document not found.</h1>Couldn't find $file";
-						$header  = "'HTTP/{$request['version']} 404 Not Found\r\n".
-						           "Content-Length: ".strlen($output)."\r\n";
-					}
-					break;
-			}
+				$this->setHeader("Cache-Control", "no-cache, must-revalidate");
+				$this->setHeader("Expires", "Mon, 26 Jul 1997 05:00:00 GMT");
+				$this->setHeader("Accept-Ranges", "bytes");
+				$this->sendResponse($request['version'], 200, "OK", "");
+				break;
+			default:
+				$this->handleFileRequest($request);
+				break;
 		}
-		$header .= 'Date: '.gmdate('D, d M Y H:i:s T')."\r\n";
-		if ($this->keep_alive && $request['url'] != '/get') {
-			$header .= "Connection: Keep-Alive\r\n";
-			$header .= "Keep-Alive: timeout={$this->max_idle_time} max={$this->max_total_time}\r\n";
-		} else {
-			$this->keep_alive = false;
-			$header .= "Connection: Close\r\n";
-		}
-		return $header."\r\n".$output;
 	}
 
 	public function on_read()
@@ -221,12 +296,14 @@ class HTTPClientServer extends socketServerClient
 			$request['version'] = substr($uri, strpos($uri, 'HTTP/') + 5, 3);
 			$uri                = substr($uri, strlen($request['method']) + 1);
 			$request['url']     = substr($uri, 0, strpos($uri, ' '));
-			foreach ($request as $type => $val) {
-				if ($type == 'connection' && $val == 'keep-alive') {
+			foreach ($request as $type => $val)
+			{
+				if ($type == 'connection' && $val == 'keep-alive')
+				{
 					$this->keep_alive = true;
 				}
 			}
-			$this->write($this->handle_request($request));
+			$this->handle_request($request);
 			$this->read_buffer  = '';
 		}
 	}
@@ -246,14 +323,15 @@ class HTTPClientServer extends socketServerClient
 	{
 		$idle_time  = time() - $this->last_action;
 		$total_time = time() - $this->accepted;
-		if (($total_time > $this->max_total_time || $idle_time > $this->max_idle_time) && !$this->streaming_client) {
-			$this->close();
-			$this->on_disconnect();
-		}
 
 		if ($this->streaming_client && $this->irc_client)
 		{
 			$this->irc_client->send_script('chat.onSetNumberOfUsers(' . count(AirD::$aIRCClients) . ');');
+		}
+
+		if (($total_time > $this->max_total_time || $idle_time > $this->max_idle_time)) {// && !$this->streaming_client) {
+			$this->on_disconnect();
+			$this->Destroy();
 		}
 	}
 
@@ -264,5 +342,10 @@ class HTTPClientServer extends socketServerClient
 			$this->on_disconnect();
 			$this->Destroy();
 		}
+	}
+
+	public function write($s)
+	{
+		parent::write($s);
 	}
 }

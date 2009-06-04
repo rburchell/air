@@ -81,6 +81,7 @@ class ircClient extends socketClient
 		else
 		{
 			// Reconnected, send all pending messages in the queue
+			AirD::Log(AirD::LOGTYPE_INTERNAL, "Client reattaching to " . $this->key . ", flushing " . count($this->aPendingMessages) . " to http", true);
 			foreach ($this->aPendingMessages as $sMessage)
 				$this->oHTTPClient->write($sMessage);
 		}
