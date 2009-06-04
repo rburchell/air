@@ -50,9 +50,16 @@ abstract class AirD
 
 	public static function Log($sType, $sMessage, $bDebug = false)
 	{
-		echo strftime('%T') . " " . $sType . ": " . $sMessage . "\n";
+		$sMsg = strftime('%T') . " " . $sType . ": " . $sMessage . "\n";
+		echo $sMsg;
+		$rLog = fopen("aird.log", "a");
+		fwrite($rLog, $sMsg);
+		fclose($rLog);
 	}
 }
+
+
+unlink("aird.log");
 
 if (!class_exists(Config))
 	die("Please make a config.");
