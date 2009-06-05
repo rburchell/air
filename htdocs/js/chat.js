@@ -31,6 +31,7 @@ var Stream =
 			{
 				eval(aLines[xhopts.nextParsePos]);
 				xhopts.nextParsePos++;
+				xhopts.pollFailures = 0; // if it parses, reset failure count
 			}
 			catch (e)
 			{
