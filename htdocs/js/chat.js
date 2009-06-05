@@ -13,6 +13,36 @@ var xhopts =
 
 var Stream =
 {
+	parseStuff: function(transport)
+	{
+		var aLines = transport.responseText.split("\n");
+		chat.debug("onInteractive, I have " + aLines.length + " lines to parse, pos is " + xhopts.nextParsePos);
+
+		while (xhopts.nextParsePos != aLines.length)
+		{
+			chat.debug("Parsing " + aLines[xhopts.nextParsePos]);
+			// This will happen constantly if there is nothing new to recieve
+			// This is *important* to keep,  as when a burst of text comes through, it would mark the empty line as evaluated already
+			// meaning it would skip the first line of the burst. Is there a better way to do this?
+			if (aLines[xhopts.nextParsePos].trim() == '')
+			{
+				break;
+			}
+
+			try
+			{
+				eval(aLines[xhopts.nextParsePos]);
+			}
+			catch (e)
+			{
+				// This can happen if a full JS line hasn't arrived yet.
+				chat.debug("EXCEPTION while parsing " + aLines[xhopts.nextParsePos] + " failure count: " + xhopts.pollFailures++);
+			}
+
+			xhopts.nextParsePos++;
+		}
+	},
+
 	createStream: function(url)
 	{
 		return new Ajax.Request(url,
@@ -21,6 +51,8 @@ var Stream =
 
 			onSuccess: function(transport)
 			{
+				Stream.parseStuff(transport);
+
 				// Disconnected. Reset nextParsePos so that eval() knows where to go.
 				xhopts.nextParsePos = 0;
 
@@ -52,32 +84,7 @@ var Stream =
 
 			onInteractive: function(transport)
 			{
-				var aLines = transport.responseText.split("\n");
-				chat.debug("onInteractive, I have " + aLines.length + " lines to parse, pos is " + xhopts.nextParsePos);
-
-				while (xhopts.nextParsePos != aLines.length)
-				{
-					chat.debug("Parsing " + aLines[xhopts.nextParsePos]);
-					// This will happen constantly if there is nothing new to recieve
-					// This is *important* to keep,  as when a burst of text comes through, it would mark the empty line as evaluated already
-					// meaning it would skip the first line of the burst. Is there a better way to do this?
-					if (aLines[xhopts.nextParsePos].trim() == '')
-					{
-						break;
-					}
-
-					try
-					{
-						eval(aLines[xhopts.nextParsePos]);
-					}
-					catch (e)
-					{
-						// This can happen if a full JS line hasn't arrived yet.
-						chat.debug("EXCEPTION while parsing " + aLines[xhopts.nextParsePos] + " failure count: " + xhopts.pollFailures++);
-					}
-
-					xhopts.nextParsePos++;
-				}
+				Stream.parseStuff(transport);
 			}
 		});
 	},
