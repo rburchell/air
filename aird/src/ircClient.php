@@ -940,9 +940,16 @@ class ircClient extends socketClient
 	public function send_script($msg)
 	{
 		AirD::Log(AirD::LOGTYPE_JAVASCRIPT, "Sending script nr " . $this->script_sends++ . " to " . $this->key . ": " . $msg);
-		// CLIENT COUNT SHOULD NOT BE HERE.
 		if ($this->oHTTPClient)
 		{
+			// If we've sent a lot to this HTTP client
+			if ($this->script_sends % 1000)
+			{
+				// Tell the client to go out of streaming mode: this means the HTTP timer will reap the socket eventually,
+				// forcing the client to reconnect.
+				$this->oHTTPClient->setStreaming(false);
+			}
+
 			$this->oHTTPClient->write($msg. ";\n");
 		}
 		else

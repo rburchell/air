@@ -46,6 +46,11 @@ class HTTPClientServer extends socketServerClient
 		$this->close();
 	}
 
+	public function setStreaming($bStreaming)
+	{
+		$this->streaming_client = $bStreaming;
+	}
+
 	private function setHeader($sHeader, $sValue)
 	{
 		$this->aHeaders[$sHeader] = $sValue;
@@ -65,14 +70,11 @@ class HTTPClientServer extends socketServerClient
 			$sResponse .= $sKey . ": " . $sVal . "\r\n";
 		}
 
-		if (!empty($sBody))
-		{
-			// End headers
-			$sResponse .= "\r\n";
+		// End headers
+		$sResponse .= "\r\n";
 
-			// Now body.
-			$sResponse .= $sBody;
-		}
+		// Now body.
+		$sResponse .= $sBody;
 
 		// Write whole response
 		$this->write($sResponse);
@@ -90,7 +92,6 @@ class HTTPClientServer extends socketServerClient
 		if (!file_exists($file) || !is_file($file))
 		{
 			AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a NONEXISTANT file: " . $file,  true);
-			$this->setHeader("Accept-Ranges", "bytes");
 			$this->setHeader("Last-Modified", gmdate('D, d M Y H:i:s T', time()));
 			$this->setHeader("Cache-Control", "no-cache, must-revalidate");
 			$this->setHeader("Expires", "Mon, 26 Jul 1997 05:00:00 GMT");
@@ -101,18 +102,6 @@ class HTTPClientServer extends socketServerClient
 		}
 
 		$mtime = filemtime($file);
-
-		//  [if-modified-since] => fri,  20 mar 2009 00:10:32 gmt
-		if (isset($aRequest['if-modified-since']) && strtotime($aRequest['if-modified-since']) == $mtime)
-		{
-			// Previously requested data, just send 304
-			AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a CACHED file: " . $file,  true);
-			$this->sendResponse($aRequest['version'], 304, "OK", "");
-			return;
-		}
-
-		// Newly requested data, process request properly
-		AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a file: " . $file,  true);
 
 		// Do basic mime type sniffing. Required for Chrome, and a good idea anyway.
 		$sContentType = "";
@@ -130,14 +119,28 @@ class HTTPClientServer extends socketServerClient
 			}
 		}
 
-		// Send file.
-		$sFile = file_get_contents($file);
-		$this->setHeader("Accept-Ranges", "bytes");
 		$this->setHeader("Last-Modified", gmdate('D, d M Y H:i:s T', filemtime($file)));
-		$this->setHeader("Content-Length", strlen($sFile)); // was using filesize($file)
 		if (!empty($sContentType))
 			$this->setHeader("Content-Type", $sContentType);
-		$this->sendResponse($aRequest['version'], 200, "OK", $sFile);
+
+		//  [if-modified-since] => fri,  20 mar 2009 00:10:32 gmt
+		if (isset($aRequest['if-modified-since']) && strtotime($aRequest['if-modified-since']) == $mtime)
+		{
+			// Previously requested data, just send 304
+			AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a CACHED file: " . $file,  true);
+			$this->sendResponse($aRequest['version'], 304, "Not Modified", "");
+			return;
+		}
+		else
+		{
+			// Newly requested data, process request properly
+			AirD::Log(AirD::LOGTYPE_HTTP, "Client " . $this->remote_address. " requested a file: " . $file,  true);
+			// Send file.
+			$sFile = file_get_contents($file);
+
+			$this->setHeader("Content-Length", strlen($sFile)); // was using filesize($file)
+			$this->sendResponse($aRequest['version'], 200, "OK", $sFile);
+		}
 	}
 
 	private function handle_request($request)
@@ -189,7 +192,7 @@ class HTTPClientServer extends socketServerClient
 			$request['url'] = substr($request['url'], 0, strpos($request['url'], '?'));
 		}
 
-		if (!$this->keep_alive)
+		if ($this->keep_alive)
 		{
 			$this->setHeader("Connection", "Keep-Alive");
 			$this->setHeader("Keep-Alive", "timeout={$this->max_idle_time} max={$this->max_total_time}");
@@ -197,7 +200,6 @@ class HTTPClientServer extends socketServerClient
 		}
 		else
 		{
-		$this->keep_alive = false;
 			$this->setHeader("Connection", "Close");
 			AirD::Log(AirD::LOGTYPE_HTTP, "Close");
 		}
@@ -216,7 +218,7 @@ class HTTPClientServer extends socketServerClient
 				$client->client_address = $this->remote_address;
 				$client->nick           = $nickname;
 				$this->irc_client       = $client;
-				$this->streaming_client = true;
+				$this->setStreaming(true);
 				$this->setHeader("Cache-Control", "no-cache, must-revalidate");
 				$this->setHeader("Expires", "Mon, 26 Jul 1997 05:00:00 GMT");
 				$this->sendResponse($request['version'], 200, "OK", "chat.key = '{$this->key}';\nthis.connected = true;\n");
@@ -231,7 +233,7 @@ class HTTPClientServer extends socketServerClient
 				if (isset($params['key']) && !empty($params['key']) && isset(AirD::$aIRCClients[$params['key']]))
 				{
 					$this->irc_client       = AirD::$aIRCClients[$params['key']];
-					$this->streaming_client = true;
+					$this->setStreaming(true);
 					$this->key = $params['key'];
 					AirD::Log(AirD::LOGTYPE_HTTP, "Renegotiated for " . $params['key']);
 					$this->setHeader("Cache-Control", "no-cache, must-revalidate");
@@ -265,7 +267,6 @@ class HTTPClientServer extends socketServerClient
 
 				$this->setHeader("Cache-Control", "no-cache, must-revalidate");
 				$this->setHeader("Expires", "Mon, 26 Jul 1997 05:00:00 GMT");
-				$this->setHeader("Accept-Ranges", "bytes");
 				$this->sendResponse($request['version'], 200, "OK", "");
 				break;
 			default:
@@ -329,7 +330,7 @@ class HTTPClientServer extends socketServerClient
 			$this->irc_client->send_script('chat.onSetNumberOfUsers(' . count(AirD::$aIRCClients) . ');');
 		}
 
-		if (($total_time > $this->max_total_time || $idle_time > $this->max_idle_time)) {// && !$this->streaming_client) {
+		if (($total_time > $this->max_total_time || $idle_time > $this->max_idle_time) && !$this->streaming_client) {
 			$this->on_disconnect();
 			$this->Destroy();
 		}
@@ -342,10 +343,5 @@ class HTTPClientServer extends socketServerClient
 			$this->on_disconnect();
 			$this->Destroy();
 		}
-	}
-
-	public function write($s)
-	{
-		parent::write($s);
 	}
 }

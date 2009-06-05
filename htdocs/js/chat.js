@@ -187,7 +187,7 @@ var chat =
 	},
 
 	message: function(msg) {
-		return new Ajax.Request('/message?key=' + chat.key + '&msg=' + encodeURIComponent(msg) + '&channel='+ encodeURIComponent(chat.current),
+		new Ajax.Request('/message?key=' + chat.key + '&msg=' + encodeURIComponent(msg) + '&channel='+ encodeURIComponent(chat.current),
 		{
 			method: 'get',
 		});
