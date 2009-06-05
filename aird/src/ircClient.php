@@ -84,6 +84,8 @@ class ircClient extends socketClient
 			AirD::Log(AirD::LOGTYPE_INTERNAL, "Client reattaching to " . $this->key . ", flushing " . count($this->aPendingMessages) . " to http", true);
 			foreach ($this->aPendingMessages as $sMessage)
 				$this->oHTTPClient->write($sMessage);
+
+			$this->aPendingMessages = array();
 		}
 	}
 
