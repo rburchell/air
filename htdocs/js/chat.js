@@ -30,14 +30,24 @@ var Stream =
 			try
 			{
 				eval(aLines[xhopts.nextParsePos]);
+				xhopts.nextParsePos++;
 			}
 			catch (e)
 			{
 				// This can happen if a full JS line hasn't arrived yet.
 				chat.debug("EXCEPTION while parsing " + aLines[xhopts.nextParsePos] + " failure count: " + xhopts.pollFailures++);
-			}
 
-			xhopts.nextParsePos++;
+				if (xhopts.pollFailures > 5)
+				{
+					chat.debug("Too many poll failures. Skipping line.");
+					xhopts.pollFailures = 0;
+					xhopts.nextParsePos++;
+				}
+				else
+				{
+					break;
+				}
+			}
 		}
 	},
 
