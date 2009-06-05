@@ -943,7 +943,7 @@ class ircClient extends socketClient
 		if ($this->oHTTPClient)
 		{
 			// If we've sent a lot to this HTTP client
-			if ($this->script_sends % 1000)
+			if ($this->script_sends % 1000 == 0)
 			{
 				// Tell the client to go out of streaming mode: this means the HTTP timer will reap the socket eventually,
 				// forcing the client to reconnect.

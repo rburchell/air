@@ -158,7 +158,7 @@ class HTTPClientServer extends socketServerClient
 		{
 			$sMsg = "Bad request: You specified a version of HTTP I don't understand. I only speak 1.0 or 1.1.";
 			$this->setHeader("Content-Length", strlen($sMsg));
-			$this->sendResponse($request['version'], 400, "Bad Request", $sMsg);
+			$this->sendResponse($request['version'], 500, "Bad Request", $sMsg);
 			return;
 		}
 		
@@ -167,7 +167,7 @@ class HTTPClientServer extends socketServerClient
 		{
 			$sMsg = "Bad request: You specified a HTTP method I don't understand. I only understand GET.";
 			$this->setHeader("Content-Length", strlen($sMsg));
-			$this->sendResponse($request['version'], 400, "Bad Request", $sMsg);
+			$this->sendResponse($request['version'], 500, "Bad Request", $sMsg);
 			return;
 		}
 
@@ -252,7 +252,7 @@ class HTTPClientServer extends socketServerClient
 					AirD::Log(AirD::LOGTYPE_HTTP, "Renegotiation for " . $params['key'] . " failed");
 					$sMsg = "Bad request: The key was invalid"; 
 					$this->setHeader("Content-Length", strlen($sMsg));
-					$this->sendResponse($request['version'], 400, "Bad Request", $sMsg);
+					$this->sendResponse($request['version'], 500, "Bad Request", $sMsg);
 					return;
 				}
 				break;
@@ -330,7 +330,9 @@ class HTTPClientServer extends socketServerClient
 			$this->irc_client->send_script('chat.onSetNumberOfUsers(' . count(AirD::$aIRCClients) . ');');
 		}
 
-		if (($total_time > $this->max_total_time || $idle_time > $this->max_idle_time) && !$this->streaming_client) {
+		if (($total_time > $this->max_total_time || $idle_time > $this->max_idle_time) && !$this->streaming_client)
+		{
+			AirD::Log(AirD::LOGTYPE_HTTP, "TIMING OUT CLIENT");
 			$this->on_disconnect();
 			$this->Destroy();
 		}
@@ -338,7 +340,8 @@ class HTTPClientServer extends socketServerClient
 
 	public function on_write()
 	{
-		if (strlen($this->write_buffer) == 0 && !$this->keep_alive && !$this->streaming_client) {
+		if (strlen($this->write_buffer) == 0 && !$this->keep_alive && !$this->streaming_client)
+		{
 			$this->disconnected = true;
 			$this->on_disconnect();
 			$this->Destroy();
