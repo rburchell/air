@@ -16,11 +16,9 @@ var Stream =
 	parseStuff: function(transport)
 	{
 		var aLines = transport.responseText.split("\n");
-		chat.debug("onInteractive, I have " + aLines.length + " lines to parse, pos is " + xhopts.nextParsePos);
 
 		while (xhopts.nextParsePos != aLines.length)
 		{
-			chat.debug("Parsing " + aLines[xhopts.nextParsePos]);
 			// This will happen constantly if there is nothing new to recieve
 			// This is *important* to keep,  as when a burst of text comes through, it would mark the empty line as evaluated already
 			// meaning it would skip the first line of the burst. Is there a better way to do this?
@@ -51,6 +49,8 @@ var Stream =
 
 			onSuccess: function(transport)
 			{
+				// Call this here in case any last minute data arrived.
+				// IE also *only* works through the call here, as IE's XHR doesn't give us responseText in onInteractive (...sigh...)
 				Stream.parseStuff(transport);
 
 				// Disconnected. Reset nextParsePos so that eval() knows where to go.
@@ -58,28 +58,21 @@ var Stream =
 
 				if (transport.status == 200)
 				{
-					chat.debug("Status 200, reconnecting... session " + chat.key);
 					Stream.createStream('/renegotiate?key=' + chat.key);
+					return;
 				}
-				else
-				{
-					// Add 500ms to the reconnect delay every time we are forced to reconnect, to not bombard the server with requests.
-					chat.reconnectdelay += 500;
 
-					// Don't stop an instant reconnect attempt, but if that fails, minimum wait is 5 seconds to stop server hammering.
-					if (chat.reconnectdelay > 0 && chat.reconnectdelay < 5000)
-						chat.reconnectdelay = 5000;
-					else if (chat.reconnectdelay > 50000) // Also cap at 50 seconds.
-						chat.reconnectdelay = 50000;
+				// Add 500ms to the reconnect delay every time we are forced to reconnect, to not bombard the server with requests.
+				chat.reconnectdelay += 500;
 
-					chat.add("info", "Disconnected from server (HTTP status " + transport.status + "). Reconnecting in " + (chat.reconnectdelay / 1000) + " seconds.");
-					setTimeout('chat.frameDisconnected()', chat.reconnectdelay);
-				}
-			},
+				// Don't stop an instant reconnect attempt, but if that fails, minimum wait is 5 seconds to stop server hammering.
+				if (chat.reconnectdelay > 0 && chat.reconnectdelay < 5000)
+					chat.reconnectdelay = 5000;
+				else if (chat.reconnectdelay > 50000) // Also cap at 50 seconds.
+					chat.reconnectdelay = 50000;
 
-			onLoading: function(transport)
-			{
-				chat.debug("Request sent...");
+				chat.add("info", "Disconnected from server (HTTP status " + transport.status + "). Reconnecting in " + (chat.reconnectdelay / 1000) + " seconds.");
+				setTimeout('chat.frameDisconnected()', chat.reconnectdelay);
 			},
 
 			onInteractive: function(transport)
