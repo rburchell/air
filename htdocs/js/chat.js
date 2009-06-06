@@ -104,7 +104,7 @@ var chat =
 	connected    : false,
 	timer        : false,
 	editor       : false,
-	channels     : [],
+	windows      : [],
 	current      : false,
 	listWindow   : false,
 	reconnectdelay : 0,
@@ -115,8 +115,8 @@ var chat =
 	{
 		$('new_channel').observe("mousedown", chat.showList);
 		chat.editor = new chatEditor;
-		chat.addChannel(chat.server, false);
-		chat.channel(chat.server).show();
+		chat.addWindow(chat.server, false);
+		chat.getWindow(chat.server).show();
 		chat.onResize();
 		chat.nickname = $('entry_nick').value;
 		chat.server = $('entry_server').value;
@@ -154,41 +154,41 @@ var chat =
 		}
 	},
 
-	addChannel: function(channel, canclose)
+	addWindow: function(swindow, canclose)
 	{
 		if (typeof(canclose) == "undefined")
 			canclose = true;
 
-		chat.channels.push(new chatChannel(channel, canclose));
+		chat.windows.push(new chatChannel(swindow, canclose));
 		chat.onResize();
 		chat.editor.focus();
 	},
 
-	removeChannel: function(channel) {
-		if (chat.channel(channel) != undefined) {
-			chat.channel(channel).destroy();
+	removeWindow: function(swindow) {
+		if (chat.getWindow(swindow) != undefined) {
+			chat.getWindow(swindow).destroy();
 		}
 		chat.editor.focus();
 	},
 
-	channel: function(channel) {
-	    for (i = 0; i < chat.channels.length; i++) {
-			if (chat.channels[i].channel == channel) {
-				return chat.channels[i];
+	getWindow: function(swindow) {
+	    for (i = 0; i < chat.windows.length; i++) {
+			if (chat.windows[i].title == swindow) {
+				return chat.windows[i];
 			}
 	    }
 	    return undefined;
 	},
 
-	add: function(channel, message, dosmiley) {
-		if (chat.channel(channel) != undefined) {
-			chat.channel(channel).add(message, dosmiley);
+	add: function(swindow, message, dosmiley) {
+		if (chat.getWindow(swindow) != undefined) {
+			chat.getWindow(swindow).add(message, dosmiley);
 		}
 	},
 
-	sortNames: function(channel) {
-		if (chat.channel(channel) != undefined) {
-			chat.channel(channel).sortNames();
+	sortNames: function(sWindow) {
+		if (chat.getWindow(sWindow) != undefined) {
+			chat.getWindow(sWindow).sortNames();
 		}
 	},
 
@@ -226,8 +226,8 @@ var chat =
 		}
 	},
 
-	onMessage: function(from, channel, msg) {
-		chat.add(channel, '<div class="from">'+from+':</div> <span class="message">'+msg+'</span>', true);
+	onMessage: function(from, sWindow, msg) {
+		chat.add(sWindow, '<div class="from">'+from+':</div> <span class="message">'+msg+'</span>', true);
 	},
 
 	onNotice: function(from, msg) {
@@ -246,8 +246,8 @@ var chat =
 		chat.add(chat.server, '<span class="notice">'+msg+'</span></span>')
 	},
 
-	onAction: function(channel, from, msg) {
-		chat.add(channel, '<span class="notice">'+from+' <span class="message">'+msg+'</span></span>', true)
+	onAction: function(sWindow, from, msg) {
+		chat.add(sWindow, '<span class="notice">'+from+' <span class="message">'+msg+'</span></span>', true)
 	},
 
 	onPrivateMessage: function(from, msg) {
@@ -262,20 +262,20 @@ var chat =
 		chat.add(chat.server, '<span class="notice">Server notice: '+notice+'</span>', true);
 	},
 
-	onKick: function(channel, from, who, reason) {
-		if (chat.channel(channel) != undefined) {
-			chat.channel(channel).members.remove(who);
-			chat.channel(channel).members.render();
+	onKick: function(sWindow, from, who, reason) {
+		if (chat.getWindow(sWindow) != undefined) {
+			chat.getWindow(sWindow).members.remove(who);
+			chat.getWindow(sWindow).members.render();
 		}
 		var reason = (reason != undefined && reason != '') ? ' ('+reason+')' : '';
-		chat.add(channel, '<span class="kick">'+from+' kicked '+who+' from '+channel+reason+'</span>', true);
+		chat.add(sWindow, '<span class="kick">'+from+' kicked '+who+' from '+sWindow+reason+'</span>', true);
 
 	},
 
-	onKicked: function(channel, from, who, reason) {
-		chat.removeChannel(channel);
+	onKicked: function(sWindow, from, who, reason) {
+		chat.removeWindow(sWindow);
 		var reason = (reason != undefined && reason != '') ? ' ('+reason+')' : '';
-		chat.add(chat.server,  '<span class="kick">You were kicked from '+channel+' by '+from+reason+'</span>', true);
+		chat.add(chat.server,  '<span class="kick">You were kicked from '+sWindow+' by '+from+reason+'</span>', true);
 	},
 
 	onError: function(error) {
@@ -286,47 +286,47 @@ var chat =
 		}
 	},
 
-	onPart: function(channel, who, message) {
-		if (chat.channel(channel) != undefined) {
-			chat.add(channel, '<span class="part">'+who+' left</span>');
-			chat.channel(channel).members.remove(who);
-			chat.channel(channel).members.render();
+	onPart: function(sWindow, who, message) {
+		if (chat.getWindow(sWindow) != undefined) {
+			chat.add(sWindow, '<span class="part">'+who+' left</span>');
+			chat.getWindow(sWindow).members.remove(who);
+			chat.getWindow(sWindow).members.render();
 		}
 	},
 
-	onParted: function(channel) {
-		chat.removeChannel(channel);
-		chat.add(chat.server, '<span class="part">Left '+channel+'</span>');
+	onParted: function(sWindow) {
+		chat.removeWindow(sWindow);
+		chat.add(chat.server, '<span class="part">Left '+sWindow+'</span>');
 	},
 
-	onJoin: function(channel, who) {
-		if (chat.channel(channel) != undefined) {
-			chat.channel(channel).members.add(who, false, false);
-			chat.channel(channel).members.render();
-			chat.add(channel, '<span class="join">'+who+' joined '+channel+'</span>');
+	onJoin: function(sWindow, who) {
+		if (chat.getWindow(sWindow) != undefined) {
+			chat.getWindow(sWindow).members.add(who, false, false);
+			chat.getWindow(sWindow).members.render();
+			chat.add(sWindow, '<span class="join">'+who+' joined '+sWindow+'</span>');
 		}
 	},
 
-	onJoined: function(channel) {
-		chat.addChannel(channel);
-		if (chat.channel(channel) != undefined) {
-			chat.channel(channel).show();
+	onJoined: function(sWindow) {
+		chat.addWindow(sWindow);
+		if (chat.getWindow(sWindow) != undefined) {
+			chat.getWindow(sWindow).show();
 		}
 	},
 
-	onTopic: function(channel, topic) {
-		if (chat.channel(channel) != undefined) {
-			chat.channel(channel).setTopic(topic);
+	onTopic: function(sWindow, topic) {
+		if (chat.getWindow(sWindow) != undefined) {
+			chat.getWindow(sWindow).setTopic(topic);
 		}
 	},
 
-	onNick: function(channel, from, to) {
+	onNick: function(sWindow, from, to) {
 		if (from == chat.nickname) {
 			chat.nickname = to;
 		}
-		if (chat.channel(channel) != undefined) {
-			chat.add(channel, '<span class="notice">'+from+' changes nickname to '+to+'</span>');
-			chat.channel(channel).members.nick(from, to);
+		if (chat.getWindow(sWindow) != undefined) {
+			chat.add(sWindow, '<span class="notice">'+from+' changes nickname to '+to+'</span>');
+			chat.getWindow(sWindow).members.nick(from, to);
 		}
 	},
 
@@ -346,29 +346,29 @@ var chat =
 		$('usercount').innerHTML = number + " users online";
 	},
 
-	onChannelMode: function(channel, mode) {
-		chat.add(channel, '<span class="notice">channel mode set to '+mode+'</span>')
+	onChannelMode: function(sWindow, mode) {
+		chat.add(sWindow, '<span class="notice">channel mode set to '+mode+'</span>')
 	},
 
-	addMember: function(channel, who, prefixes) {
-		if (chat.channel(channel) != undefined) {
-			chat.channel(channel).members.add(who, prefixes);
+	addMember: function(sWindow, who, prefixes) {
+		if (chat.getWindow(sWindow) != undefined) {
+			chat.getWindow(sWindow).members.add(who, prefixes);
 		}
 	},
 
-	setPrefix: function(channel, who, prefix)
+	setPrefix: function(sWindow, who, prefix)
 	{
-		chat.channel(channel).members.setPrefix(channel, who, prefix);
+		chat.getWindow(sWindow).members.setPrefix(sWindow, who, prefix);
 	},
 
-	unSetPrefix: function(channel, who, prefix)
+	unSetPrefix: function(sWindow, who, prefix)
 	{
-		chat.channel(channel).members.unSetPrefix(channel, who, prefix);
+		chat.getWindow(sWindow).members.unSetPrefix(sWindow, who, prefix);
 	},
 
-	renderMembers: function(channel) {
-		if (chat.channel(channel) != undefined) {
-			chat.channel(channel).members.render();
+	renderMembers: function(sWindow) {
+		if (chat.getWindow(sWindow) != undefined) {
+			chat.getWindow(sWindow).members.render();
 		}
 	},
 
@@ -379,17 +379,17 @@ var chat =
 		$('editor_input').setStyle({ width : (pageWidth - 10)+'px'});
 		$('menu_div').setStyle({    width : (pageWidth - 8)+'px'});
 		$('editor_menu').setStyle({ width : (pageWidth - 8)+'px'});
-		chat.channels.each(function(channel) {
-			channel.onResize();
+		chat.windows.each(function(oWindow) {
+			oWindow.onResize();
 		});
 		window.scrollTo(0, 0);
 	},
 
 	frameDisconnected: function() {
-		$A(chat.channels).each(function(channel) {
-			if (channel.channel != chat.server)
+		chat.windows.each(function(oWindow) {
+			if (oWindow.title != chat.server)
 			{
-				channel.destroy();
+				oWindow.destroy();
 			}
 		});
 		chat.connected = false;

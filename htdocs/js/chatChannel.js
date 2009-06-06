@@ -4,32 +4,32 @@
 /************************** chatChannel class implimentation ***********************************/
 var chatChannel = Class.create();
 chatChannel.prototype = {
-	initialize: function(channel, candelete)
+	initialize: function(title, candelete)
 	{
 		this.canclose           = candelete;
 		this.closing            = false;
-		this.channel            = channel;
+		this.title            = title;
 		this.topic              = '';
 		this.messageCounter     = 0;
-		this.divMain            = 'channel_'+this.channel;
-		this.divNames           = 'names_'+this.channel;
-		this.divWhoHeader       = 'who_header_' + this.channel;
-		this.divWhoSizer        = 'who_sizer_'+this.channel;
-		this.divWhoContent      = 'who_content_' + this.channel;
-		this.ulWhoContent       = 'who_content_ul_' + this.channel;
-		this.divWhoTitle        = 'who_title_' + this.channel;
-		this.divMessages        = 'messages_' + this.channel;
-		this.divMessagesHeader  = 'messages_header_' + this.channel;
-		this.divHeaderClose     = 'messages_close_' + this.channel;
-		this.divMessagesContent = 'messages_content_' + this.channel;
-		this.divButton          = 'channel_button_'+this.channel;
-		this.divSizer           = 'sizer_'+this.channel;
-		this.divTopic           = 'messages_topic_' + this.channel;
+		this.divMain            = 'channel_'+this.title;
+		this.divNames           = 'names_'+this.title;
+		this.divWhoHeader       = 'who_header_' + this.title;
+		this.divWhoSizer        = 'who_sizer_'+this.title;
+		this.divWhoContent      = 'who_content_' + this.title;
+		this.ulWhoContent       = 'who_content_ul_' + this.title;
+		this.divWhoTitle        = 'who_title_' + this.title;
+		this.divMessages        = 'messages_' + this.title;
+		this.divMessagesHeader  = 'messages_header_' + this.title;
+		this.divHeaderClose     = 'messages_close_' + this.title;
+		this.divMessagesContent = 'messages_content_' + this.title;
+		this.divButton          = 'channel_button_'+this.title;
+		this.divSizer           = 'sizer_'+this.title;
+		this.divTopic           = 'messages_topic_' + this.title;
 		this.createLayout();
-		this.members            = new chatMembers(this.channel, this.ulWhoContent, this.divWhoTitle, this);
-		$(this.divMessagesHeader).update(this.channel+'<span id="'+this.divTopic+'"></span>');
+		this.members            = new chatMembers(this.title, this.ulWhoContent, this.divWhoTitle, this);
+		$(this.divMessagesHeader).update(this.title+'<span id="'+this.divTopic+'"></span>');
 		var close = this.canclose ? '<div class="tab_close" id="'+this.divHeaderClose+'"></div>' : '';
-		new Insertion.Bottom('toolbar', '<div class="channel_button" id="'+this.divButton+'"><div class="tab_left"></div><div class="tab_center">'+close+this.channel+'&nbsp;</div><div class="tab_right"></div></div>');
+		new Insertion.Bottom('toolbar', '<div class="channel_button" id="'+this.divButton+'"><div class="tab_left"></div><div class="tab_center">'+close+this.title+'&nbsp;</div><div class="tab_right"></div></div>');
 		$(this.divWhoSizer).onclick = this.collapseWho.bindAsEventListener(this);
 		$(this.divButton).onclick   = this.show.bindAsEventListener(this);
 		this.eventMouseDown = this.initDrag.bindAsEventListener(this);
@@ -54,15 +54,15 @@ chatChannel.prototype = {
 		}
 		$(this.divButton).stopObserving('click');
 		$('main').removeChild($(this.divMain));
-		chat.channels.splice(chat.channels.indexOf(this), 1);
-		if (chat.current == this.channel) {
-			chat.channel(chat.server).show();
+		chat.windows.splice(chat.windows.indexOf(this), 1);
+		if (chat.current == this.title) {
+			chat.getWindow(chat.server).show();
 		}
 	},
 
 	close: function() {
 		this.closing = true;
-		chat.message('/part '+this.channel);
+		chat.message('/part '+this.title);
 		return true;
 	},
 
@@ -122,7 +122,7 @@ chatChannel.prototype = {
 		var pageHeight = (document.documentElement.clientHeight || window.document.body.clientHeight);
 		var namesWidth = $(this.divNames).getDimensions().width;
 		var sendHeight = $('send').getDimensions().height;
-		if (this.channel == chat.server) {
+		if (this.title == chat.server) {
 			namesWidth = -4;
 		}
 
@@ -184,16 +184,16 @@ chatChannel.prototype = {
 
 	show: function() {
 		if (!this.closing) {
-			chat.channels.each(function(channel) {
-				if (channel.channel != this.channel) {
-					channel.hide();
+			chat.windows.each(function(oWindow) {
+				if (oWindow.title != this.channel) {
+					oWindow.hide();
 				}
 			});
 			$(this.divMain).show();
 			$(this.divButton).setStyle({fontWeight : 'normal', color: '#ffffff'});
 			$(this.divButton).addClassName('on');
 			this.onResize();
-			chat.current = this.channel;
+			chat.current = this.title;
 		}
 	},
 
@@ -219,7 +219,7 @@ chatChannel.prototype = {
 		if (dosmiley === 'undefined')
 			dosmiley = false;
 
-		if (chat.current != this.channel) {
+		if (chat.current != this.title) {
 			$(this.divButton).setStyle({fontWeight : 'bold'});
 		}
 		if (this.messageCounter >= 500) {

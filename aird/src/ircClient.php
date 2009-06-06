@@ -507,7 +507,7 @@ class ircClient extends socketClient
 		if (isset($this->channels[$channel])) $this->channels[$channel]->on_part($who, $message);
 		if ($who == $this->nick) {
 			$channel = $this->escape($channel);
-			$this->send_script("chat.removeChannel('{$channel}')");
+			$this->send_script("chat.removeWindow('{$channel}')");
 			unset($this->channels[$channel]);
 		}
 	}
