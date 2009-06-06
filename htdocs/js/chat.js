@@ -394,15 +394,6 @@ var chat =
 	},
 }
 
-// Used in chatConnectionWindow, array.random(), returns a random element from the array
-Array.prototype.random = function(r) {
-	var i = 0, l = this.length;
-	if( !r ) { r = this.length; }
-	else if( r > 0 ) { r = r % l; }
-	else { i = r; r = l + r % l; }
-	return this[ Math.floor( r * Math.random() - i ) ];
-};
-
 // String.trim prototype, used in chatEdtitor.js (and others)
 String.prototype.trim = function() {
 	return this.replace(/^\s+|\s+$/g, "");
