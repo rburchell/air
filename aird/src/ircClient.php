@@ -550,17 +550,17 @@ class ircClient extends socketClient
 
 	private function rpl_yourhost($aParams)
 	{
-		$this->send_script("chat.onServerInfo('your_host','" . $this->escape($aParams[3]) . "')");
+		$this->send_script("chat.onServerInfo('" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_created($aParams)
 	{
-		$this->send_script("chat.onServerInfo('created','" . $this->escape($aParams[3]) . "')");
+		$this->send_script("chat.onServerInfo('" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_myinfo($aParams)
 	{
-		$this->send_script("chat.onServerInfo('my_info','" . $this->escape($aParams[3]) . "')");
+		$this->send_script("chat.onServerInfo('" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_isupport($aParams)
@@ -611,47 +611,47 @@ class ircClient extends socketClient
 				$this->write("PROTOCTL NAMESX\r\n");
 			}
 		}
-		$this->send_script("chat.onServerInfo('ispport','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "')");
+		$this->send_script("chat.onServerInfo('" . $this->escape(implode(" ", array_slice($aParams, 3))) . "')");
 	}
 
 	private function rpl_uniqid($aParams)
 	{
-		$this->send_script("chat.onServerInfo('uniq_id','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "')");
+		$this->send_script("chat.onServerInfo('" . $this->escape(implode(" ", array_slice($aParams, 3))) . "')");
 	}
 
 	private function rpl_luserclient($aParams)
 	{
-		$this->send_script("chat.onServerInfo('local_user_client','" . $this->escape($aParams[3]) . "')");
+		$this->send_script("chat.onServerInfo('" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_luserop($aParams)
 	{
-		$this->send_script("chat.onServerInfo('local_user_ops','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "')");
+		$this->send_script("chat.onServerInfo('" . $this->escape(implode(" ", array_slice($aParams, 3))) . "')");
 	}
 
 	private function rpl_luserme($aParams)
 	{
-		$this->send_script("chat.onServerInfo('local_user_me','" . $this->escape($aParams[3]) . "')");
+		$this->send_script("chat.onServerInfo('" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_localusercount($aParams)
 	{
-		$this->send_script("chat.onServerInfo('local_user_count','" . $this->escape($aParams[3]) . "')");
+		$this->send_script("chat.onServerInfo('" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_globalusercount($aParams)
 	{
-		$this->send_script("chat.onServerInfo('global_user_count','" . $this->escape($aParams[3]) . "')");
+		$this->send_script("chat.onServerInfo('" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_globalconnections($aParams)
 	{
-		$this->send_script("chat.onServerInfo('global_connections','" . $this->escape($aParams[3]) . "')");
+		$this->send_script("chat.onServerInfo('" . $this->escape($aParams[3]) . "')");
 	}
 
 	private function rpl_luserchannels($aParams)
 	{
-		$this->send_script("chat.onServerInfo('channels_formed','" . $this->escape(implode(" ", array_slice($aParams, 3))) . "')");
+		$this->send_script("chat.onServerInfo('" . $this->escape(implode(" ", array_slice($aParams, 3))) . "')");
 	}
 
 	private function rpl_motdstart($aParams)
@@ -794,6 +794,12 @@ class ircClient extends socketClient
 		$this->send_script("chat.onError('$param')");
 	}
 
+	private function info_generic($aParams)
+	{
+		$param = $this->escape(implode(" ", array_slice($aParams, 3)));
+		$this->send_script("chat.onServerInfo('$param')");
+	}
+
 	/*** Internal communication functions ***/
 
 	private function handle_server_message($aParams)
@@ -813,7 +819,7 @@ class ircClient extends socketClient
 			else
 			{
 				AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented message " . $aParams[1]);
-				$this->err_generic($aParams);
+				$this->info_generic($aParams);
 			}
 		} elseif ($aParams[1] == 'NOTICE') {
 			$this->on_server_notice($aParams[3]);
@@ -821,7 +827,7 @@ class ircClient extends socketClient
 			$this->on_mode($aParams[0], $aParams[1], $aParams[2], array_slice($aParams, 3));
 		} else {
 			AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented message " . $aParams[1]);
-			$this->err_generic($aParams);
+			$this->info_generic($aParams);
 		}
 	}
 
@@ -890,11 +896,11 @@ class ircClient extends socketClient
 						$this->err_generic($aParams);
 					} else {
 						AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented client message " . $command);
-						$this->err_generic($aParams);
+						$this->info_generic($aParams);
 					}
 				} else {
 					AirD::Log(AirD::LOGTYPE_IRC, "Client " . $this->key . " got unimplemented client message " . $command);
-						$this->err_generic($aParams);
+						$this->info_generic($aParams);
 				}
 		}
 	}

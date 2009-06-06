@@ -206,7 +206,7 @@ var chat =
 		chat.add(chat.server, '<span class="notice">Connected to server</span>');
 	},
 
-	onServerInfo: function(what, info) {
+	onServerInfo: function(info) {
 		chat.add(chat.server, '<span class="notice">'+info+'</span>');
 		if (chat.current != chat.server) {
 			chat.add(chat.current, '<span class="notice">'+info+'</span>');
