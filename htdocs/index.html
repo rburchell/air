@@ -38,7 +38,7 @@
 						</tr>
 						<tr>
 							<td colspan="2" class="fpage" style="padding-top: 5px; padding-bottom: 10px; padding-left: 5px; padding-right: 5px;">
-								Enter your nickname and the server you wish to connect to.
+								Just enter your nickname, and start chatting!
 							</td>
 						</tr>
 						<tr>
@@ -51,7 +51,7 @@
 								<input type="text" id="entry_nick" style="border: 1px solid #99bbe8; width: 90%;">
 							</td>
 						</tr>
-						<tr>
+						<tr id="server-advanced" style="display: none">
 							<td class="fpage" style="text-align: right;">
 								<b>
 									Server
@@ -64,6 +64,18 @@
 						<tr>
 							<td colspan="2">
 								<div id="loading" style="padding-top: 5px; padding-right: 5px; padding-bottom: 4px; text-align: right;">
+									<input type="button" value="Advanced Settings" id="connect-advanced-settings" onclick="
+									if ($('server-advanced').style.display == 'none')
+									{
+										$('server-advanced').style.display = '';
+										$('connect-advanced-settings').value = 'Basic Settings';
+									}
+									else
+									{
+										$('server-advanced').style.display = 'none';
+										$('connect-advanced-settings').value = 'Advanced Settings';
+									}
+										">
 									<input type="button" value="Connect" id="connectbutton" onclick="connect();">
 									<img src="/images/loading.gif" id="connectload">
 								</div>
