@@ -138,7 +138,7 @@ class HTTPClientServer extends socketServerClient
 			// Send file.
 			$sFile = file_get_contents($file);
 
-			if ($sContentType == "application/javascript")
+			if (!Config::DEBUG_MODE && $sContentType == "application/javascript")
 			{
 				$sFile = JSMin::minify($sFile);
 			}
