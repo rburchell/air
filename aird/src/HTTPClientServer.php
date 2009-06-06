@@ -138,6 +138,11 @@ class HTTPClientServer extends socketServerClient
 			// Send file.
 			$sFile = file_get_contents($file);
 
+			if ($sContentType == "application/javascript")
+			{
+				$sFile = JSMin::minify($sFile);
+			}
+
 			$this->setHeader("Content-Length", strlen($sFile)); // was using filesize($file)
 			$this->sendResponse($aRequest['version'], 200, "OK", $sFile);
 		}
