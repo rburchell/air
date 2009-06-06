@@ -23,6 +23,7 @@
 				$("connect").style.display = "none";
 				chat.nickname = $('entry_nick').value;
 				chat.server = $('entry_server').value;
+				chat.initialize();
 				chat.tryConnect();
 			}
 		</script>

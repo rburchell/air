@@ -4,7 +4,9 @@
 /************************** chatChannel class implimentation ***********************************/
 var chatChannel = Class.create();
 chatChannel.prototype = {
-	initialize: function(channel) {
+	initialize: function(channel, candelete)
+	{
+		this.canclose           = candelete;
 		this.closing            = false;
 		this.channel            = channel;
 		this.topic              = '';
@@ -26,7 +28,7 @@ chatChannel.prototype = {
 		this.createLayout();
 		this.members            = new chatMembers(this.channel, this.ulWhoContent, this.divWhoTitle, this);
 		$(this.divMessagesHeader).update(this.channel+'<span id="'+this.divTopic+'"></span>');
-		var close = this.channel != 'info' ? '<div class="tab_close" id="'+this.divHeaderClose+'"></div>' : '';
+		var close = this.canclose ? '<div class="tab_close" id="'+this.divHeaderClose+'"></div>' : '';
 		new Insertion.Bottom('toolbar', '<div class="channel_button" id="'+this.divButton+'"><div class="tab_left"></div><div class="tab_center">'+close+this.channel+'&nbsp;</div><div class="tab_right"></div></div>');
 		$(this.divWhoSizer).onclick = this.collapseWho.bindAsEventListener(this);
 		$(this.divButton).onclick   = this.show.bindAsEventListener(this);
@@ -35,7 +37,7 @@ chatChannel.prototype = {
 		this.eventMouseUp   = this.endDrag.bindAsEventListener(this);
 		$(this.divSizer).observe("mousedown", this.eventMouseDown);
 		this.hide();
-		if (this.channel != 'info') {
+		if (this.canclose) {
 			$(this.divHeaderClose).onclick = this.close.bindAsEventListener(this);
 		} else {
 			$(this.divNames).setStyle({width : '0px'});
@@ -47,14 +49,14 @@ chatChannel.prototype = {
 	destroy: function() {
 		$(this.divButton).hide();
 		this.members.destroy();
-		if (this.channel != 'info') {
+		if (this.canclose) {
 			$(this.divHeaderClose).stopObserving('click');
 		}
 		$(this.divButton).stopObserving('click');
 		$('main').removeChild($(this.divMain));
 		chat.channels.splice(chat.channels.indexOf(this), 1);
 		if (chat.current == this.channel) {
-			chat.channel('info').show();
+			chat.channel(chat.server).show();
 		}
 	},
 
@@ -120,7 +122,7 @@ chatChannel.prototype = {
 		var pageHeight = (document.documentElement.clientHeight || window.document.body.clientHeight);
 		var namesWidth = $(this.divNames).getDimensions().width;
 		var sendHeight = $('send').getDimensions().height;
-		if (this.channel == 'info') {
+		if (this.channel == chat.server) {
 			namesWidth = -4;
 		}
 

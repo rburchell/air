@@ -111,11 +111,12 @@ var chat =
 
 	currentPrefixes : '',
 
-	initialize: function() {
+	initialize: function()
+	{
 		$('new_channel').observe("mousedown", chat.showList);
 		chat.editor = new chatEditor;
-		chat.addChannel('info');
-		chat.channel('info').show();
+		chat.addChannel(chat.server, false);
+		chat.channel(chat.server).show();
 		chat.onResize();
 		chat.nickname = $('entry_nick').value;
 		chat.server = $('entry_server').value;
@@ -135,12 +136,12 @@ var chat =
 	debug: function(message)
 	{
 		// XXX: Make this togglable.
-		chat.add("info", message);
+		chat.add(chat.server, message);
 	},
 	
 	tryConnect: function()
 	{
-		chat.add("info", "Connecting to server: " + chat.server + " as " + chat.nickname + "...");
+		chat.add(chat.server, "Connecting to server: " + chat.server + " as " + chat.nickname + "...");
 		Stream.createStream('/get?nickname=' + chat.nickname + '&server=' + chat.server);
 	},
 
@@ -153,8 +154,12 @@ var chat =
 		}
 	},
 
-	addChannel: function(channel) {
-		chat.channels.push(new chatChannel(channel));
+	addChannel: function(channel, canclose)
+	{
+		if (typeof(canclose) == "undefined")
+			canclose = true;
+
+		chat.channels.push(new chatChannel(channel, canclose));
 		chat.onResize();
 		chat.editor.focus();
 	},
@@ -198,24 +203,24 @@ var chat =
 		// Reset reconnect delay so we don't get huge delays after a long downtime
 		chat.reconnectdelay = 0;
 		connected = true;
-		chat.add('info', '<span class="notice">Connected to server</span>');
+		chat.add(chat.server, '<span class="notice">Connected to server</span>');
 	},
 
 	onServerInfo: function(what, info) {
-		chat.add('info', '<span class="notice">'+info+'</span>');
-		if (chat.current != 'info') {
+		chat.add(chat.server, '<span class="notice">'+info+'</span>');
+		if (chat.current != chat.server) {
 			chat.add(chat.current, '<span class="notice">'+info+'</span>');
 		}
 	},
 
 	onMotd: function(motd) {
-		chat.add('info', '<span class="notice">'+motd+'</span>');
+		chat.add(chat.server, '<span class="notice">'+motd+'</span>');
 	},
 
 	onCTCP: function(from, ctcp)
 	{
-		chat.add('info', '<span class="notice">Recieved CTCP ' + ctcp + ' request from '+from+'</span>');
-		if (chat.current != 'info')
+		chat.add(chat.server, '<span class="notice">Recieved CTCP ' + ctcp + ' request from '+from+'</span>');
+		if (chat.current != chat.server)
 		{
 			chat.add(chat.current, '<span class="notice">Recieved CTCP ' + ctcp + ' request from '+from+'</span>');
 		}
@@ -226,18 +231,19 @@ var chat =
 	},
 
 	onNotice: function(from, msg) {
-		chat.add('info', '<span class="notice">Notice from '+from+': '+msg+'</span>');
-		if (chat.current != 'info') {
+		chat.add(chat.server, '<span class="notice">Notice from '+from+': '+msg+'</span>');
+		if (chat.current != chat.server)
+		{
 			chat.add(chat.current, '<span class="notice">Notice from '+from+': '+msg+'</span>', true);
 		}
 	},
 
 	onWhois: function(msg) {
-		chat.add('info','<span class="notice">'+msg+'</span></span>')
+		chat.add(chat.server, '<span class="notice">'+msg+'</span></span>')
 	},
 
 	onWhowas: function(msg) {
-		chat.add('info','<span class="notice">'+msg+'</span></span>')
+		chat.add(chat.server, '<span class="notice">'+msg+'</span></span>')
 	},
 
 	onAction: function(channel, from, msg) {
@@ -245,14 +251,15 @@ var chat =
 	},
 
 	onPrivateMessage: function(from, msg) {
-		chat.add('info', '<span class="privmsg">Message from '+from+': <span class="message">'+msg+'</span></span>')
-		if (chat.current != 'info') {
+		chat.add(chat.server, '<span class="privmsg">Message from '+from+': <span class="message">'+msg+'</span></span>')
+		if (chat.current != chat.server)
+		{
 			chat.add(chat.current, '<span class="privmsg">Message from '+from+': <span class="message">'+msg+'</span></span>', true)
 		}
 	},
 
 	onServerNotice: function(notice) {
-		chat.add('info', '<span class="notice">Server notice: '+notice+'</span>', true);
+		chat.add(chat.server, '<span class="notice">Server notice: '+notice+'</span>', true);
 	},
 
 	onKick: function(channel, from, who, reason) {
@@ -268,12 +275,13 @@ var chat =
 	onKicked: function(channel, from, who, reason) {
 		chat.removeChannel(channel);
 		var reason = (reason != undefined && reason != '') ? ' ('+reason+')' : '';
-		chat.add('info',  '<span class="kick">You were kicked from '+channel+' by '+from+reason+'</span>', true);
+		chat.add(chat.server,  '<span class="kick">You were kicked from '+channel+' by '+from+reason+'</span>', true);
 	},
 
 	onError: function(error) {
-		chat.add('info', '<span class="kick">Error: '+error+'</span>');
-		if (chat.current != 'info') {
+		chat.add(chat.server, '<span class="kick">Error: '+error+'</span>');
+		if (chat.current != chat.server)
+		{
 			chat.add(chat.current, '<span class="kick">Error: '+error+'</span>');
 		}
 	},
@@ -288,7 +296,7 @@ var chat =
 
 	onParted: function(channel) {
 		chat.removeChannel(channel);
-		chat.add('info', '<span class="part">Left '+channel+'</span>');
+		chat.add(chat.server, '<span class="part">Left '+channel+'</span>');
 	},
 
 	onJoin: function(channel, who) {
@@ -323,11 +331,11 @@ var chat =
 	},
 
 	onWho: function(nick, ident, host, server, full_name) {
-		chat.add('info', '<span class="notice"> * '+nick+' ('+ident+'), host: '+host+', server: '+server+', full name: '+full_name+'</span>');
+		chat.add(chat.server, '<span class="notice"> * '+nick+' ('+ident+'), host: '+host+', server: '+server+', full name: '+full_name+'</span>');
 	},
 
 	onEndOfWho: function() {
-		chat.add('info', '<span class="notice">End of who</span>');
+		chat.add(chat.server, '<span class="notice">End of who</span>');
 	},
 
 	onSetGUIVersion: function(verstring) {
@@ -379,7 +387,8 @@ var chat =
 
 	frameDisconnected: function() {
 		$A(chat.channels).each(function(channel) {
-			if (channel.channel != 'info') {
+			if (channel.channel != chat.server)
+			{
 				channel.destroy();
 			}
 		});
@@ -400,6 +409,5 @@ String.prototype.trim = function() {
 };
 
 // Hook up the chat object to the onLoad and onResize events
-Event.observe(window, "load",   chat.initialize);
 Event.observe(window, "resize", chat.onResize);
 Event.observe(window, "unload", chat.onUnload);
