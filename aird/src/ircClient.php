@@ -972,6 +972,26 @@ class ircClient extends socketClient
 		$sHex = dechex($iDecimal);
 		$this->write("USER " . $sHex . " * * :http://my.browserchat.net\r\n");
 		$this->write("NICK {$this->nick}\r\n");
+
+		$aSettings = $this->getSettings();
+
+		if (isset($aSettings['webirc']))
+		{
+			$this->write("WEBIRC " . $aSettings['webirc'] . " client " . $this->client_address . " " . $this->client_address . "\r\n");
+		}
+	}
+
+	private function getSettings()
+	{
+		if (!is_file("networks/" . $this->remote_address))
+		{
+			AirD::Log(AirD::LOGTYPE_IRC, "No settings for " . $this->remote_address);
+			return array();
+		}
+
+		$sSettings = file_get_contents("networks/" . $this->remote_address);
+		$aSettings = unserialize($sSettings);
+		return $aSettings;
 	}
 
 	public function on_read()
