@@ -546,6 +546,13 @@ class ircClient extends socketClient
 		// reset our nickname, it might be truncated or changed by server
 		$this->on_nick($this->nick, $aParams[2]);
 		$this->nick = $aParams[2];
+
+		$aSettings = $this->getSettings();
+
+		if (isset($aSettings['autojoin']))
+		{
+			$this->write("JOIN " . $aSettings['autojoin'] . "\r\n");
+		}
 	}
 
 	private function rpl_yourhost($aParams)
