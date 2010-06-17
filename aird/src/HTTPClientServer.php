@@ -2,7 +2,7 @@
 /*
  * Air -- FOSS AJAX IRC Client.
  *
- * Copyright (C) 2009, Robin Burchell <w00t@freenode.net>
+ * Copyright (C) 2009, Robin Burchell <viroteck@viroteck.net>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
